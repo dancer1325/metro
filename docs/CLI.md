@@ -3,12 +3,15 @@ id: cli
 title: Metro CLI Options
 ---
 
-The `metro` command line runner has a number of useful options. You can run `metro
---help` to view all available options. Here is a brief overview:
+* `metro`
+  * == CL runner 
+  * `metro --help`
+    * view ALL available options
 
 ## `build <entry>`
 
-Generates a JavaScript bundle containing the specified entrypoint and its descendants.
+* generates a JS bundle / contain
+  * specified entrypoint + its descendants
 
 ### Options
 
@@ -27,14 +30,14 @@ Generates a JavaScript bundle containing the specified entrypoint and its descen
 | `resolver-option` |  | [Custom resolver options](./Resolution.md#customresolveroptions-string-mixed) of the form `key=value` | Array |
 | `transform-option` |  | Custom transform options of the form `key=value` | Array |
 
-
 ## `serve`
 
-Starts Metro on the given port, building bundles on the fly.
+* starts Metro | given port
+* build bundles | fly
 
 ## `get-dependencies <entryFile>`
 
-List all dependencies that will be bundled for a given entry point.
+* list ALL dependencies / will be bundled -- for a -- given entry point
 
 ### Options
 
