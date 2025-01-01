@@ -7,6 +7,7 @@
 [![Follow @MetroBundler on Twitter](https://img.shields.io/twitter/follow/MetroBundler?style=social)](https://twitter.com/intent/follow?screen_name=MetroBundler)
 
 * 🚇:= JS bundler -- for -- React Native 
+  * == from entry file & VARIOUS options -> returns 1! JS file / includes ALL your code + it's dependencies
   * **🚅 Fast**
     * main goal
       * sub-second reload cycles,
