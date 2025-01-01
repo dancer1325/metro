@@ -3,48 +3,52 @@ id: local-development
 title: Local Development Setup
 ---
 
-This page includes tips for developers working on Metro itself, including how to test your changes within other local projects.
+* goal
+  * developers / work | Metro
+    * how to test your changes | OTHER local projects
 
-### Testing Metro Changes inside a React Native Project
+### Testing Metro Changes | React Native Project
 
-When developing Metro, running your iterations against a local target project can be a great way to test the impact of your changes end-to-end.
+* recommendations
+  * run your Metro changes | local target project
 
-Our recommended workflow is to use [`yarn link`][1] to register local `metro` packages within your development clone and then hot-switch to these versions in the consuming project. These instructions cover linking a local Metro clone with a bare workflow React Native app (i.e. having run `npx react-native init MetroTestApp`).
+* recommended workflow
+  * register local `metro` packages | your development clone ( -- via -- [`yarn link`][1])
+  * hot-switch to these versions | consuming project 
 
-```sh
-.
-└── Development
-    ├── metro        # metro clone
-    └── MetroTestApp # target project
- ```
+* goal
+  * link a local Metro clone -- with a -- bare workflow React Native app 
 
-1. **Use `yarn link` in your `metro` clone to register local packages**
-
-    From inside our `metro` clone, `yarn link` is responsible for registering local package folders to be linked to elsewhere.
-
-    We recommend using `npm exec --workspaces` to register all packages in the `metro` repo — these can be individually linked into the target project later.
     ```sh
-    npm exec --workspaces -- yarn link
-    ```
-2. **Use `yarn link` to replace Metro packages in your target project**
+    .
+    └── Development
+        ├── metro        # metro clone
+        └── MetroTestApp # target project
+     ```
 
-    From inside our target project folder, `yarn link <package-name>` can be used to apply our registered `metro` packages for that project only.
-
+* steps    
+  1. `yarn link` | your `metro` clone -- to -- register local packages
+     * | `metro` clone,
+       * `yarn link` -- is responsible for -- registering local package folders / linked to ELSEWHERE
+     * `npm exec --workspaces` register ALL packages | `metro` repo
+       * they can be individually linked | target project
+         ```sh
+         npm exec --workspaces -- yarn link
+         ```
+  2. `yarn link` | target project folder -- to replace -- Metro packages | your target project
     ```sh
     # Links 3 packages
     yarn link metro metro-config metro-runtime
     ```
-
-    Note: At mininum, the `metro` and `metro-runtime` packages need to be linked.
-
-3. **Configure Metro `watchFolders` to work with our linked packages**
-
-    Because `yarn link` has included files outside of the immediate React Native project folder, we need to inform Metro that this set of files exists (as it will not automatically follow the symlinks). Add the following to your `metro.config.js`:
-
-    ```diff
+  3. configure Metro `watchFolders` / work with our linked packages
+     * Reason: 🧠
+       * `yarn link` has included files | outside of React Native project folder
+       * -> need to inform Metro -- about the -- existence of these files 🧠
+     
+    ```diff, metro.config.js
     + const path = require('path');
 
-      module.exports = {
+        module.exports = {
     +   watchFolders: [
     +     path.resolve(__dirname, './node_modules'),
     +     // Include necessary file paths for `yarn link`ed modules
@@ -52,24 +56,25 @@ Our recommended workflow is to use [`yarn link`][1] to register local `metro` pa
     +     path.resolve(__dirname, '../metro/node_modules'),
     +   ],
         ...
-      };
+        };
     ```
+    
+    * check that you can run Metro | our target project
+   
+      ```sh
+      yarn react-native start
+      ```
 
-    **Run Metro**
-
-    Now we should be able to run Metro within our target project. Remember to restart this command after any code changes you make to `metro` or to the target project's `metro.config.js` file.
-
-   ```sh
-   yarn react-native start
-   ```
-
-4. **(Optional) Clean up with `yarn unlink`**
-
-    If you want to restore the remote (i.e. production npm) versions of `metro` packages in your target project, step 2 (and 1) can be repeated with `yarn unlink`.
+  4. (Optional) Clean up
+    * repeat step 1 & 2 -- with --`yarn unlink`
+    * goal
+      * restore the remote (== production npm) versions of `metro` packages | your target project
 
 ### Debug Logging
 
-Metro uses the [debug](https://www.npmjs.com/package/debug) package to write logs under named debug scopes (for example: `Metro:WatchmanWatcher`). Set the `DEBUG` environment variable before starting Metro to enable logs matching the supplied pattern.
+* TODO:
+Metro uses the [debug](https://www.npmjs.com/package/debug) package to write logs under named debug scopes (for example: `Metro:WatchmanWatcher`). 
+Set the `DEBUG` environment variable before starting Metro to enable logs matching the supplied pattern.
 
 The snippet below provides a pattern matching all Metro-defined messages.
 ```sh
