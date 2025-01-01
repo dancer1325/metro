@@ -3,35 +3,29 @@ id: getting-started
 title: Getting Started
 ---
 
-Install Metro using [`npm`](https://www.npmjs.com/):
 
 ```bash
+# NPM
 npm install --save-dev metro metro-core
-```
 
-Or via [`yarn`](https://yarnpkg.com/):
-
-```bash
+# YARN
 yarn add --dev metro metro-core
 ```
 
 ## Running `metro`
 
-You can run Metro by either running the [CLI](./CLI.md) or by calling it programmatically.
+* ways
+  * run the [CLI](./CLI.md) or
+  * call it programmatically
+    * requirements
+    
+      ```
+      const Metro = require('metro');
+      ```
 
-### Running Programmatically
+### Running Programmatically -- ALLOWED methods -- 
 
-First, require the module by doing:
-
-```js
-const Metro = require('metro');
-```
-
-Within the object returned, several main methods are given:
-
-### Method `runMetro(config)`
-
-Given the config, a `metro-server` will be returned. You can then hook this into a proper HTTP(S) server by using its `processRequest` method:
+#### Method `runMetro(config)`
 
 ```js
 'use strict';
@@ -43,6 +37,7 @@ const Metro = require('metro');
 Metro.loadConfig().then(async (config) => {
   const metroBundlerServer = await Metro.runMetro(config);
 
+  // hook a MetroServer | HTTP(S)
   const httpServer = http.createServer(
     metroBundlerServer.processRequest.bind(metroBundlerServer),
   );
@@ -51,7 +46,9 @@ Metro.loadConfig().then(async (config) => {
 });
 ```
 
-In order to be also compatible with Express apps, `processRequest` will also call its third parameter when the request could not be handled by Metro. This allows you to integrate the server with your existing server, or to extend a new one:
+* TODO:
+In order to be also compatible with Express apps, `processRequest` will also call its third parameter when the request could not be handled by Metro. 
+This allows you to integrate the server with your existing server, or to extend a new one:
 
 ```js
 const httpServer = http.createServer((req, res) => {
@@ -74,16 +71,21 @@ app.use(
 app.listen(8081);
 ```
 
-### Method `runServer(config, options)`
+#### Method `runServer(config, options)`
 
-Starts a development server based on the given configuration and options. Returns the server.
-We recommend using `runMetro` instead of `runServer`, `runMetro` calls this function.
+* recommendations
+  * 👀use `runMetro` instead of `runServer` 👀
 
-#### Options
+##### Options
 
-* `host (string)`: Where to host the server on.
-* `onReady (Function)`: Called when the server is ready to serve requests.
-* `onClose (Function)`: Called when the server and all other Metro processes are closed. You can also observe the server close event directly using `httpServer.on('close', () => {});`.
+* `host (string)`
+  * place | host the server on
+* `onReady (Function)`
+  * if server is ready to serve requests -> called
+* `onClose (Function)`
+  * if server and ALL OTHER Metro processes are closed -> called 
+  * `httpServer.on('close', () => {});`
+    * alternative to `onClose` 
 
 ```js
 const config = await Metro.loadConfig();
@@ -94,6 +96,8 @@ const metroHttpServer = await Metro.runServer(config, {
 
 httpServer.on('close', () => {console.log('metro server is closed')});
 ```
+
+TODO:
 * `secure (boolean)`: **DEPRECATED** Whether the server should run on `https` instead of `http`.
 * `secureKey (string)`: **DEPRECATED** The key to use for `https` when `secure` is on.
 * `secureCert (string)`: **DEPRECATED** The cert to use for `https` when `secure` is on.
@@ -120,14 +124,20 @@ await Metro.runServer(config, {
 });
 ```
 
-### Method `runBuild(config, options)`
+#### Method `runBuild(config, options)`
 
-Given a configuration and a set of options that you would typically pass to a server, plus a set of options specific to the bundle itself, a bundle will be built. The return value is a Promise that resolves to an object with two properties, `code` and `map`. This is useful at build time.
+* uses
+  * | build time
 
-#### Options
+##### Options
+
+* options / related to the
+  * server
+  * bundle itself
 
 <!-- TODO(ives): Decide whether we need to show this to the user  * `output (boolean)` -->
 
+TODO:
 * `dev (boolean)`: Create a development version of the build (`process.env.NODE_ENV = 'development'`).
 * `entry (string)`: Pointing to the entry file to bundle.
 * `onBegin (Function)`: Called when the bundling starts.
@@ -150,13 +160,21 @@ await Metro.runBuild(config, {
 });
 ```
 
-### Method `createConnectMiddleware(config)`
+#### Method `createConnectMiddleware(config)`
 
-Instead of creating the full server, creates a Connect middleware that answers to bundle requests. This middleware can then be plugged into your own servers. The `port` parameter is optional and only used for logging purposes.
+* Connect middleware
+  * 👀ALTERNATIVE of creating a full server 👀
+  * -- answers to -- bundle requests 
+  * uses
+    * plugged | your OWN servers
 
-#### Options
+##### Options
 
-* `port (number)`: Port for the Connect middleware (only for logging purposes).
+* `port (number)`
+  * OPTIONAL
+  * := Connect middleware's port
+  * uses
+    * logging purposes
 
 ```js
 const Metro = require('metro');
@@ -178,36 +196,81 @@ Metro.loadConfig().then(async config => {
 
 ### Configuration
 
-Check [Configuring Metro](./Configuration.md) for details on configuration options.
+* see [Configuring Metro](./Configuration.md)
 
 ## URL and bundle request
 
-The server has the ability to serve assets, bundles and source maps for those bundles.
+* server
+  * serves
+    * assets,
+    * bundles
+    * source maps | those bundles
 
 ### Assets
 
-In order to request an asset, you can freely use the `require` method as if it was another JS file. The server will treat this specific `require` calls  and make them return the path to that file. When an asset is requested (an asset is recognized by its extension, which has to be on the `assetExts` array) it is generally served as-is.
+* 👀if you want to request an asset -> use `require` 👀
+  * == done | ANOTHER JS file
+  * treated special -- by the -- server
+    * -> return the path to that file
+  * asset -- is recognized by -- its extension
+    * `assetExts` := array / allowed extensions
 
-However, the server is also able to serve specific assets depending on the platform and on the requested size (in the case of images). The way you specify the platform is via the dotted suffix (e.g. `.ios`) and the resolution via the at suffix (e.g. `@2x`). This is transparently handled for you when using `require`.
+* you can specify assets / depend on the
+  * platform
+    * `*.specificPlatform`
+      * _Example:_ `*.ios`
+  * requested size  
+    * `*specificSize`
+      * _Example:_ `@2x`
 
 ### Bundle
 
-Any JS file can be used as the root for a bundle request. The file will be looked in the `projectRoot`. All files that are required by the root will be recursively included. In order to request a bundle, just change the extension from `.js` to `.bundle`. Options for building the bundle are passed as query parameters (all optional).
+* root for a bundle request
+  * 👀VALID ANY JS file 👀
+  * place | root of the project 
+  * ALL files / it requires -> will be recursively included 
 
-* `dev`: build the bundle in development mode or not. Maps 1:1 to the `dev` setting of the bundles. Pass `true` or `false` as strings into the URL.
-* `platform`: platform requesting the bundle. Can be `ios` or `android`. Maps 1:1 to the `platform` setting of the bundles.
-* `minify`: whether code should be minified or not. Maps 1:1 to the `minify` setting of the bundles. Pass `true` or `false` as strings into the URL.
-* `excludeSource`: whether sources should be included in the source map or not. Pass `true` or `false` as strings into the URL.
+* if you want to request a bundle -> replace `.js` -- to -- `.bundle` 
 
-For instance, requesting `http://localhost:8081/foo/bar/baz.bundle?dev=true&platform=ios` will create a bundle out of `foo/bar/baz.js` for iOS in development mode.
+* OPTIONS for building the bundle
+  * 👀-> passed as query parameters / ALL are optional 👀
+    * `dev`
+      * build the bundle | development mode or NOT
+      * <--> 1:1 to the bundles' `dev` setting 
+      * allowed values
+        * `true`
+        * `false`
+    * `platform`
+      * platform -- requesting the -- bundle
+      * allowed values
+        * `ios`
+        * `android`
+      * <--> 1:1 to the bundles' `platform` setting
+    * `minify`
+      * == indicate whether code should be minified or not
+      * <--> 1:1 to the bundles' `minify` setting
+      * allowed values
+        * `true`
+        * `false`
+    * `excludeSource`
+      * == indicate whether sources should be included or not | source map
+      * allowed values
+        * `true`
+        * `false`
+  * _Example:_ if you request `http://localhost:8081/foo/bar/baz.bundle?dev=true&platform=ios`
+    * -> create a bundle out of `foo/bar/baz.js` for iOS in development mode
 
 ### Source maps
 
-Source maps are built for each bundle by using the same URL as the bundle (thus, the same as the JS file acting as a root). This will only work when `inlineSourceMap` is set to `false`. All options you passed to the bundle will be added to the source map URL; otherwise, they wouldn't match.
+* TODO:
+Source maps are built for each bundle by using the same URL as the bundle (thus, the same as the JS file acting as a root). 
+This will only work when `inlineSourceMap` is set to `false`.
+All options you passed to the bundle will be added to the source map URL; otherwise, they wouldn't match.
 
 ## JavaScript transformer
 
-The JavaScript transformer ([`babelTransformerPath`](./Configuration.md#babeltransformerpath)) is the place where JS code will be manipulated; useful for calling Babel. The transformer can export two methods:
+The JavaScript transformer ([`babelTransformerPath`](./Configuration.md#babeltransformerpath)) is the place where JS code will be manipulated; useful for calling Babel. 
+The transformer can export two methods:
 
 ### Method `transform(module)`
 
@@ -237,4 +300,6 @@ module.exports.transform = file => {
 
 ### Method `getCacheKey()`
 
-Optional method that returns the cache key of the transformer. When using different transformers, this allows to correctly tie a transformed file to the transformer that converted it. The result of the method has to be a `string`.
+Optional method that returns the cache key of the transformer.
+When using different transformers, this allows to correctly tie a transformed file to the transformer that converted it.
+The result of the method has to be a `string`.
