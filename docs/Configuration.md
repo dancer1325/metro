@@ -3,60 +3,58 @@ id: configuration
 title: Configuring Metro
 ---
 
-A Metro config can be created in these three ways (ordered by priority):
-
-1.  `metro.config.js`
-2.  `metro.config.json`
-3.  The `metro` field in `package.json`
-
-You can also give a custom file to the configuration by specifying `--config <path/to/config>` when calling the CLI.
-
-:::note
-
-When Metro is started via the React Native CLI, some defaults are different from those mentioned below.
-See the [React Native repository](https://github.com/facebook/react-native/blob/main/packages/community-cli-plugin/src/utils/loadMetroConfig.js) for details.
-
-:::
+* Metro config
+  * ways to create it / ordered by priority
+    1. `metro.config.js`
+    2. `metro.config.json`
+    3. `package.json`'s `metro` field
+    4. `metro ... --config pathToConfigFile`
+    5. Metro / started -- via the -- React Native CLI
+       6. see the [React Native repository](https://github.com/facebook/react-native/blob/main/packages/community-cli-plugin/src/utils/loadMetroConfig.js)
 
 ## Configuration Structure
 
-The configuration is based on [our concepts](./Concepts.md), which means that for every module we have a separate config option. A common configuration structure in Metro looks like this:
+* configuration -- is based on -- [our concepts](./Concepts.md)
+  * == separate config option / EVERY module
+  * typical structure
 
-```js
-module.exports = {
-  /* general options */
-
-  resolver: {
-    /* resolver options */
-  },
-  transformer: {
-    /* transformer options */
-  },
-  serializer: {
-    /* serializer options */
-  },
-  server: {
-    /* server options */
-  },
-  watcher: {
-    /* watcher options */
-    watchman: {
-      /* Watchman-specific options */
-    }
-  }
-};
-```
+    ```js
+    module.exports = {
+      /* general options */
+    
+      resolver: {
+        /* resolver options */
+      },
+      transformer: {
+        /* transformer options */
+      },
+      serializer: {
+        /* serializer options */
+      },
+      server: {
+        /* server options */
+      },
+      watcher: {
+        /* watcher options */
+        watchman: {
+          /* Watchman-specific options */
+        }
+      }
+    };
+    ```
 
 ### General Options
 
-
 #### `cacheStores`
 
-Type: `CacheStores` (see details below)
-
-A list of storage adapters for Metro's [transformer cache](./Caching.md). This can be any combination of [built-in cache stores](./Caching.md#built-in-cache-stores) and [custom cache stores](./Caching.md#custom-cache-stores). Defaults to using a temporary directory on disk as the only cache store.
-
-When Metro needs to transform a module, it first computes a machine-independent cache key for that file, and uses it to try to read from each of the stores in order. Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
+* Type: `CacheStores`
+* == list of storage adapters -- for -- Metro's [transformer cache](./Caching.md)
+* == combination of [built-in cache stores](./Caching.md#built-in-cache-stores) + [custom cache stores](./Caching.md#custom-cache-stores) 
+* by defaults, 
+  * temporary directory | your local disk
+TODO:
+When Metro needs to transform a module, it first computes a machine-independent cache key for that file, and uses it to try to read from each of the stores in order.
+Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
 
 ```flow
 type CacheStores =
@@ -79,22 +77,24 @@ type JsonSerializable = /* Any JSON-serializable value */;
 
 #### `cacheVersion`
 
-Type: `string`
-
-An arbitrary string appended to all cache keys in the project before they are hashed. There is generally no need to set this explicitly, as Metro will automatically derive the correct cache keys from your project config and the contents of source files.
+* Type: `string`
+* uses
+  * | ALL project's cache keys
+* NO need to set this explicitly
+  * Reason: 🧠 Metro -- from your project config & the contents of source files, will AUTOMATICALLY -- derive the correct cache keys 🧠 
 
 #### `projectRoot`
 
-Type: `string`
-
-The root folder of your project. If your project depends on any files outside this root, their containing directories must be listed in [`watchFolders`](#watchfolders).
-
-:::note
-If your Metro project is developed in a monorepo and includes files from multiple logical packages, you'll generally want to set `projectRoot` to the root of your repository, or at least high enough in the hierarchy that all relevant files are reachable without separately configuring `watchFolders`.
-:::
+* Type: `string`
+* == root folder of your project
+  * _Example:_ if your Metro project is developed | monorepo & includes files from multiple logical packages -> 
+    * set `projectRoot` == root of your repository, or
+    * set `projectRoot` == high enough / ALL relevant files are reachable WITHOUT separately configuring `watchFolders` 
+* if your project depends on ANY files / outside this root -> their containing directories -- must be -- listed | [`watchFolders`](#watchfolders)
 
 #### `watchFolders`
 
+* TODO:
 Type: `Array<string>`
 
 A list of directories outside of [`projectRoot`](#projectroot) that can contain source files for the project.
