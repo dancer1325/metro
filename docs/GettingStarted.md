@@ -269,11 +269,16 @@ All options you passed to the bundle will be added to the source map URL; otherw
 
 ## JavaScript transformer
 
-The JavaScript transformer ([`babelTransformerPath`](./Configuration.md#babeltransformerpath)) is the place where JS code will be manipulated; useful for calling Babel. 
-The transformer can export two methods:
+* [`babelTransformerPath`](./Configuration.md#babeltransformerpath)
+  * == place | JS code -- will be -- manipulated
+    * uses
+      * call Babel 
+
+* methods / transform can export:
 
 ### Method `transform(module)`
 
+* TODO:
 Mandatory method that will transform code. The object received has information about the module being transformed (e.g its path, code...) and the returned object has to contain an `ast` key that is the AST representation of the transformed code. The default shipped transformer does the bare minimum amount of work by just parsing the code to AST:
 
 ```js
