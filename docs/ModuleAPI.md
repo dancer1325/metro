@@ -53,19 +53,19 @@ dynamicRequire(id) === localModule; // true
 
 ## `module.exports`
 
-* TODO:
-Similar to [`module.exports`](https://nodejs.org/api/modules.html#moduleexports) in Node. 
-The `module.exports` property holds the value `require()` will return for the current module after it finishes evaluating.
+* == [`module.exports`](https://nodejs.org/api/modules.html#moduleexports)
 
 ## ES Modules syntax (`import` and `export`)
 
-We currently recommend the use of [`@babel/plugin-transform-modules-commonjs`](https://babeljs.io/docs/babel-plugin-transform-modules-commonjs) in Metro projects to support `import` and `export`.
+* recommendations
+  * use [`@babel/plugin-transform-modules-commonjs`](https://babeljs.io/docs/babel-plugin-transform-modules-commonjs) | Metro projects
+    * Reason: 🧠 support `import` and `export` 🧠
 
-:::note
-In React Native projects that use `@react-native/babel-preset`, `import` and `export` are supported out of the box.
-:::
+* if you use `@react-native/babel-preset` | React Native projects -> `import` and `export` supported out of the box
 
 ## `import()` (dynamic import)
+
+* TODO:
 
 [`import()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import) calls are supported out of the box. 
 In React Native, using `import()` automatically splits your application code so that it loads faster during development, without affecting release builds.
