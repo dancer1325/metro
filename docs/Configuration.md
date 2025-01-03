@@ -515,20 +515,26 @@ Where to fetch the assets from.
 
 #### `babelTransformerPath`
 
-Type: `string`
+* Type: `string`
+* = name of a module /
+  * -- via Babel -- compiles code
+  * return
+    * AST
+    * optional metadata
+  * by default, `metro-babel-transformer`
 
-The name of a module that compiles code with Babel, returning an AST and optional metadata. Defaults to `metro-babel-transformer`.
+* -- refer to -- [`metro-babel-transformer`](https://github.com/facebook/metro/blob/main/packages/metro-babel-transformer/src/index.js)
+  * [`@react-native/metro-babel-transformer`](https://github.com/facebook/react-native/blob/main/packages/react-native-babel-transformer/src/index.js)
+    * 👀how to implement a CUSTOM Babel transformer 👀
 
-Refer to the source code of [`metro-babel-transformer`](https://github.com/facebook/metro/blob/main/packages/metro-babel-transformer/src/index.js) and [`@react-native/metro-babel-transformer`](https://github.com/facebook/react-native/blob/main/packages/react-native-babel-transformer/src/index.js) for details on implementing a custom Babel transformer.
-
-:::note
-This option only has an effect under the default [`transformerPath`](#transformerpath). Custom transformers may ignore it.
-:::
+* affects to
+  * default [`transformerPath`](#transformerpath)
+    * if you use CUSTOM transformers -> MAY ignore it
 
 #### `enableBabelRCLookup`
 
-Type: `boolean`
-
+* Type: `boolean`
+* TODO:
 Whether to enable searching for Babel configuration files. This is passed to Babel as the [`babelrc`](https://babeljs.io/docs/en/options#babelrc) config option. Defaults to `true`.
 
 :::note
