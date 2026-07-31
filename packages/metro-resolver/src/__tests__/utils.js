@@ -12,14 +12,14 @@
 import type {ResolutionContext} from '../index';
 import type {PackageJson} from '../types';
 
-import path from 'path';
+import path from 'node:path';
 
 /**
  * Data structure approximating a file tree. Should be populated with complete
  * paths mapping to file contents.
  */
-type MockFileMap = $ReadOnly<{
-  [path: string]: ?(string | $ReadOnly<{realPath: ?string}>),
+type MockFileMap = Readonly<{
+  [path: string]: ?(string | Readonly<{realPath: ?string}>),
 }>;
 
 /**
@@ -29,7 +29,7 @@ type MockFileMap = $ReadOnly<{
  */
 export function createResolutionContext(
   fileMap: MockFileMap = {},
-): $Diff<ResolutionContext, {originModulePath: string}> {
+): Omit<ResolutionContext, 'originModulePath'> {
   const directorySet = new Set<string>();
   for (const filePath of Object.keys(fileMap)) {
     let currentDir = filePath;
@@ -76,6 +76,7 @@ export function createResolutionContext(
         realPath: candidate.realPath,
       };
     },
+    isESMImport: false,
     mainFields: ['browser', 'main'],
     nodeModulesPaths: [],
     preferNativePlatform: false,
@@ -89,6 +90,7 @@ export function createResolutionContext(
       web: ['browser'],
     },
     unstable_enablePackageExports: false,
+    unstable_incrementalResolution: false,
     unstable_logWarning: () => {},
     ...createPackageAccessors(fileMap),
   };
@@ -100,7 +102,7 @@ export function createResolutionContext(
  */
 export function createPackageAccessors(
   fileOrPackageJsonMap: MockFileMap | {[path: string]: PackageJson},
-): $ReadOnly<{
+): Readonly<{
   getPackage: ResolutionContext['getPackage'],
   getPackageForModule: ResolutionContext['getPackageForModule'],
 }> {
@@ -148,3 +150,8 @@ export function createPackageAccessors(
     getPackageForModule,
   };
 }
+
+export const posixToSystemPath: string => string =
+  process.platform === 'win32'
+    ? filePath => filePath.replaceAll('/', '\\').replace(/^\\/, 'C:\\')
+    : filePath => filePath;

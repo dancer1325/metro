@@ -10,15 +10,16 @@
 
 'use strict';
 
-jest.mock('fs', () => new (require('metro-memory-fs'))());
+jest.mock('node:fs', () => new (require('metro-memory-fs'))());
 jest.mock('image-size');
 
 jest.useRealTimers();
 
 const {getAsset, getAssetData} = require('../Assets');
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+const crypto = require('node:crypto');
+const path = require('node:path');
+
+const fs = jest.requireMock('node:fs');
 
 const mockImageWidth = 300;
 const mockImageHeight = 200;
@@ -149,6 +150,97 @@ describe('getAsset', () => {
     await expect(
       getAssetStr('../anotherfolder/b.png', '/root', [], null, ['png']),
     ).rejects.toBeInstanceOf(Error);
+  });
+
+  test('should find an image when fileExistsInFileMap returns true', async () => {
+    writeImages({'b.png': 'b image'});
+
+    expect(
+      await getAssetStr('imgs/b.png', '/root', [], null, ['png'], () => true),
+    ).toBe('b image');
+  });
+
+  test('should throw an error when fileExistsInFileMap returns false', async () => {
+    writeImages({'b.png': 'b image'});
+
+    await expect(
+      getAssetStr('imgs/b.png', '/root', [], null, ['png'], () => false),
+    ).rejects.toBeInstanceOf(Error);
+  });
+
+  test('should serve scale variant when only scale variants exist and fileExistsInFileMap is provided', async () => {
+    writeImages({
+      'b@2x.png': 'b2 image',
+      'b@3x.png': 'b3 image',
+    });
+
+    expect(
+      await getAssetStr(
+        'imgs/b@2x.png',
+        '/root',
+        [],
+        null,
+        ['png'],
+        () => true,
+      ),
+    ).toBe('b2 image');
+  });
+
+  test('should throw when fileExistsInFileMap rejects the resolved scale variant', async () => {
+    writeImages({
+      'b@2x.png': 'b2 image',
+      'b@3x.png': 'b3 image',
+    });
+
+    await expect(
+      getAssetStr('imgs/b@2x.png', '/root', [], null, ['png'], () => false),
+    ).rejects.toBeInstanceOf(Error);
+  });
+
+  test('should check fileExistsInFileMap against the resolved file, not the base path', async () => {
+    writeImages({
+      'b@2x.png': 'b2 image',
+      'b@3x.png': 'b3 image',
+    });
+
+    const checkedPaths = [];
+    const result = await getAssetStr(
+      'imgs/b@2x.png',
+      '/root',
+      [],
+      null,
+      ['png'],
+      filePath => {
+        checkedPaths.push(filePath);
+        return true;
+      },
+    );
+
+    expect(result).toBe('b2 image');
+    expect(checkedPaths).toEqual(['/root/imgs/b@2x.png']);
+  });
+
+  test('should check fileExistsInFileMap for the fallback (highest scale) file', async () => {
+    writeImages({
+      'b@1x.png': 'b1 image',
+      'b@2x.png': 'b2 image',
+    });
+
+    const checkedPaths = [];
+    const result = await getAssetStr(
+      'imgs/b@3x.png',
+      '/root',
+      [],
+      null,
+      ['png'],
+      filePath => {
+        checkedPaths.push(filePath);
+        return true;
+      },
+    );
+
+    expect(result).toBe('b2 image');
+    expect(checkedPaths).toEqual(['/root/imgs/b@2x.png']);
   });
 });
 

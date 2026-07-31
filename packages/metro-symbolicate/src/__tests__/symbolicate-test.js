@@ -9,13 +9,12 @@
  * @oncall react_native
  */
 
-'use strict';
+import symbolicate from '../symbolicate';
 
-const symbolicate = require('../symbolicate');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const {PassThrough} = require('stream');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const {PassThrough} = require('node:stream');
 
 jest.useRealTimers();
 
@@ -278,12 +277,12 @@ describe('symbolicating an attribution file specifying unmapped offsets', () => 
       | {
           functionId: number,
           location: {bytecodeSize: number, virtualOffset: number},
-          usage: Array<$FlowFixMeEmpty>,
+          usage: Array<$FlowFixMe>,
         }
       | {
           functionId: number,
           location: {virtualOffset: number},
-          usage: Array<$FlowFixMeEmpty>,
+          usage: Array<$FlowFixMe>,
         },
   ) =>
     (

@@ -5,12 +5,16 @@ title: Configuring Metro
 
 * Metro config
   * ways to create it / ordered by priority
-    1. `metro.config.js`
-    2. `metro.config.json`
-    3. `package.json`'s `metro` field
-    4. `metro ... --config pathToConfigFile`
+    1. `metro.config.js` / `metro.config.cjs` / `metro.config.mjs`
+    2. `metro.config.ts` / `metro.config.cts` / `metro.config.mts`
+    3. `metro.config.json`
+    4. `.config/metro.js` / `.config/metro.cjs` / `.config/metro.mjs` / `.config/metro.ts` / `.config/metro.cts` / `.config/metro.mts` / `.config/metro.json`
+    5. `package.json`'s `metro` field
+    6. `metro ... --config pathToConfigFile`
     5. Metro / started -- via the -- React Native CLI
        6. see the [React Native repository](https://github.com/facebook/react-native/blob/main/packages/community-cli-plugin/src/utils/loadMetroConfig.js)
+
+TypeScript config files are supported in Node.js 24.0.0+ or Node.js 22.6.0+ with the `--experimental-strip-types` flag. If your Node.js version doesn't support loading TypeScript natively, you'll see an error with instructions when attempting to load a TypeScript config file.
 
 ## Configuration Structure
 
@@ -42,6 +46,36 @@ title: Configuring Metro
       }
     };
     ```
+
+```typescript
+// metro.config.mts
+import type {MetroConfig} from 'metro-config';
+
+const config: MetroConfig = {
+  /* general options */
+
+  resolver: {
+    /* resolver options */
+  },
+  transformer: {
+    /* transformer options */
+  },
+  serializer: {
+    /* serializer options */
+  },
+  server: {
+    /* server options */
+  },
+  watcher: {
+    /* watcher options */
+    watchman: {
+      /* Watchman-specific options */
+    }
+  }
+};
+
+export default config;
+```
 
 ### General Options
 
@@ -180,11 +214,11 @@ function unstable_perfLoggerFactory(
 };
 ```
 
-* **`type`** Type of event being logged, e.g. `'STARTUP'`, `'BUNDLING_REQUEST'`, `'HMR'`. See type definition of [PerfLoggerFactory](https://github.com/facebook/metro/blob/main/packages/metro-config/src/configTypes.flow.js) for a full list of event types.
+* **`type`** Type of event being logged, e.g. `'STARTUP'`, `'BUNDLING_REQUEST'`, `'HMR'`. See type definition of [PerfLoggerFactory](https://github.com/facebook/metro/blob/main/packages/metro-config/src/types.js) for a full list of event types.
 * **`opts`**
   * **`key`**: An opaque identifier to distinguish between instances of an event type (e.g. multiple, possibly concurrent, HMR requests).
 
-`unstable_perfLoggerFactory` should return an object implementing the [RootPerfLogger](https://github.com/facebook/metro/blob/main/packages/metro-config/src/configTypes.flow.js) interface. For example, a factory function returning a no-op RootPerfLogger could be implemented as follows:
+`unstable_perfLoggerFactory` should return an object implementing the [RootPerfLogger](https://github.com/facebook/metro/blob/main/packages/metro-config/src/types.js) interface. For example, a factory function returning a no-op RootPerfLogger could be implemented as follows:
 
 
 ```javascript
@@ -302,7 +336,7 @@ If set to `false`, prevents Metro from using Watchman (even if it's installed).
 
 Type: `RegExp` or `Array<RegExp>`
 
-A regular expression (or list of regular expressions) defining which paths to exclude from Metro's file map. Files whose absolute paths match these patterns are effectively hidden from Metro and cannot be resolved or imported in the current project.
+A regular expression (or list of regular expressions) defining which paths to exclude from Metro's file map. Files whose absolute paths match these patterns are effectively hidden from Metro and cannot be resolved or imported in the current project. Additionally, blocked files cannot be served via the `/assets/` endpoint.
 
 #### `hasteImplModulePath`
 
@@ -346,7 +380,7 @@ Type: `Array<string>`
 
 :::note
 
-This setting will take effect when [`unstable_enablePackageExports`](#unstable_enablepackageexports-experimental)  is `true`. It may not behave as described while this feature is experimental.
+This setting will take effect when [`unstable_enablePackageExports`](#unstable_enablepackageexports-experimental)  is `true` (the default). It may not behave as described while this feature is experimental.
 
 :::
 
@@ -368,7 +402,7 @@ Type: `{[platform: string]: Array<string>}`
 
 :::note
 
-This setting will take effect when [`unstable_enablePackageExports`](#unstable_enablepackageexports-experimental)  is `true`. It may not behave as described while this feature is experimental.
+This setting will take effect when [`unstable_enablePackageExports`](#unstable_enablepackageexports-experimental)  is `true` (the default). It may not behave as described while this feature is experimental.
 
 :::
 
@@ -389,11 +423,11 @@ When no match is found in `"exports"`, Metro will log a warning and fall back to
 - If a module is matched in `"exports"`, [`sourceExts`](#sourceexts) and [`platforms`](#platforms) will not be considered (i.e. platform-specific extensions will not be used). This is done for compatibility with Node.
 - If a module exists at a file path that is also listed in `"exports"`, and the `"exports"` entry maps to a different file, the `"exports"` entry will be preferred.
 
-Defaults to `false`.
+Defaults to `true` since Metro 0.82.0.
 
 :::note
 
-In a future release of Metro, this option will become `true` by default.
+In a future release of Metro, this option will be removed.
 
 :::
 
@@ -475,7 +509,7 @@ type ExtraTransformOptions = {
 * **`ramGroups`**: An array of absolute paths. When serializing an [indexed RAM bundle](https://reactnative.dev/docs/ram-bundles-inline-requires#enable-the-ram-format), each of the listed modules will be serialized along with its transitive dependencies. At runtime, the modules will all be parsed together as soon as any one of them is evaluated.
 * **`transform`**: Advanced options for the transformer.
   * **`inlineRequires`**:
-    * If `inlineRequires` is a boolean, it controls whether [inline requires](https://reactnative.dev/docs/ram-bundles-inline-requires#inline-requires) are enabled in this bundle.
+    * If `inlineRequires` is a boolean, it controls whether [inline requires](https://reactnative.dev/docs/optimizing-javascript-loading#advanced-automatically-inline-require-calls) are enabled in this bundle.
     * If `inlineRequires` is an object, inline requires are enabled in all modules, except ones whose absolute paths appear as keys of `inlineRequires.blockList`.
   * **`nonInlinedRequires`**: An array of unresolved module specifiers (e.g. `react`, `react-native`) to never inline, even when inline requires are enabled.
 
@@ -557,7 +591,7 @@ This option only works under the default settings for React Native. It may have 
 
 Type: `boolean`
 
-Whether to use the [`hermes-parser`](https://www.npmjs.com/package/hermes-parser) package to parse JavaScript source files, instead of Babel. Defaults to `false`.
+Whether to use the [`flow-parser`](https://www.npmjs.com/package/flow-parser) package to parse JavaScript source files, instead of Babel. Defaults to `false`.
 
 :::note
 This option only has an effect under the default [`transformerPath`](#transformerpath) and the [Babel transformers](#babeltransformerpath) built into Metro. Custom transformers and custom [Babel transformers](#babeltransformerpath) may ignore it.
@@ -568,7 +602,7 @@ This option only has an effect under the default [`transformerPath`](#transforme
 
 #### `getRunModuleStatement`
 
-Type: `(number | string) => string`
+Type: `(moduleId: number | string, globalPrefix: string) => string`
 
 Specify the format of the initial require statements that are appended at the end of the bundle. By default is `__r(${moduleId});`.
 
@@ -649,13 +683,38 @@ The `Middleware` type is an alias for [`connect.HandleFunction`](https://github.
 
 Type: `string => string`
 
-A function that will be called every time Metro processes a URL, after normalization of non-standard query-string delimiters using [`jsc-safe-url`](https://www.npmjs.com/package/jsc-safe-url). Metro will use the return value of this function as if it were the original URL provided by the client. This applies to all incoming HTTP requests (after any custom middleware), as well as bundle URLs in `/symbolicate` request payloads and within the hot reloading protocol.
+A function that will be called every time Metro processes a "URL" (see note), after normalization of non-standard query-string delimiters using [`jsc-safe-url`](https://www.npmjs.com/package/jsc-safe-url). Metro will use the return value of this function as if it were the original URL provided by the client. This applies to all incoming HTTP requests (after any custom middleware), as well as bundle URLs in `/symbolicate` request payloads and within the hot reloading protocol.
+
+:::note
+
+The input may be either an absolute URL (e.g. `https://example.com/foo/bar?baz=qux`) or a path (e.g. `/foo/bar?baz=qux`). The output should use the same form as the input - i.e. the returned value should be an absolute URL if and only if the input is an absolute URL.
+
+:::
 
 #### `forwardClientLogs`
 
 Type: `boolean`
 
 Enable forwarding of `client_log` events (when client logs are [configured](https://github.com/facebook/metro/blob/614ad14a85b22958129ee94e04376b096f03ccb1/packages/metro/src/lib/createWebsocketServer.js#L20)) to the reporter. Defaults to `true`.
+
+#### `tls`
+
+Type: `false | object`
+
+If not provided or is `false` Metro will start an HTTP server with WS WebSocket endpoints.
+
+If an object, Metro will start an HTTPS server with WSS WebSocket endpoints using the passed TLS options:
+
+```ts
+ca?: string | Buffer,      // Certificate authority (contents, not path)
+cert?: string | Buffer,    // Server certificate (contents, not path)
+key?: string | Buffer,     // Private key (contents, not path)
+requestCert?: boolean,     // Whether to authenticate the remote peer by requesting a certificate
+```
+
+Notice that when overriding the base config, object `tls` configs extend the base `tls` config, `false` overrides the base `tls` configs, and `null` and `undefined` are ignored.
+
+When running Metro with `Metro.runServer` with the `secureServerOptions` property Metro will likewise start an HTTPS server merging with the `config.server.tls` object if provided, overriding it.
 
 ---
 
@@ -732,9 +791,13 @@ The default value is `['hg.update']`.
 
 Using the `metro-config` package it is possible to merge multiple configurations together.
 
-| Method                                  | Description                                                            |
-| --------------------------------------- | ---------------------------------------------------------------------- |
-| `mergeConfig(...configs): MergedConfig` | Returns the merged configuration of two or more configuration objects. |
+| Method                                  | Description                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------------- |
+| `mergeConfig(...configs): MergedConfig` | Returns the merged configuration of two or more configuration objects or functions. |
+
+`configs` may be any combination of (promises resolving to) configuration objects or functions. Functions are called with the merged config of all configs to the left, which may be useful for complex merges with the previous config.
+
+If any arguments are promises or async functions, `mergeConfig` will return a `Promise`, otherwise it will return the merged config synchronously.
 
 :::note
 
@@ -745,43 +808,23 @@ This allows overriding and removing default config parameters such as `platforms
 
 #### Merging Example
 
-```js
-// metro.config.js
-const { mergeConfig } = require('metro-config');
+```typescript
+// metro.config.ts
+import type {ConfigT} from 'metro-config';
+import {mergeConfig} from 'metro-config';
 
-const configA = {
-  /* general options */
-
-  resolver: {
-    /* resolver options */
-  },
-  transformer: {
-    /* transformer options */
-  },
-  serializer: {
-    /* serializer options */
-  },
-  server: {
-    /* server options */
-  }
-};
-
-const configB = {
-  /* general options */
-
-  resolver: {
-    /* resolver options */
-  },
-  transformer: {
-    /* transformer options */
-  },
-  serializer: {
-    /* serializer options */
-  },
-  server: {
-    /* server options */
-  }
-};
-
-module.exports = mergeConfig(configA, configB);
+export default (defaults: ConfigT) =>
+  mergeConfig(
+    defaults,
+    // Function form: extends the default additionalExts
+    config => ({
+      watcher: {additionalExts: [...config.watcher.additionalExts, 'mts', 'cts']},
+    }),
+    // Plain object form
+    {transformer: {minifierPath: 'metro-minify-terser'}},
+    // Function form: additionalExts already includes 'mts' and 'cts' from above
+    config => ({
+      watcher: {additionalExts: [...config.watcher.additionalExts, 'css']},
+    }),
+  );
 ```

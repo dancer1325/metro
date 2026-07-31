@@ -12,6 +12,7 @@
 'use strict';
 
 import type {Context} from '../generateFunctionMap';
+import type {MixedSourceMap} from '../source-map';
 import type {NodePath} from '@babel/traverse';
 import type {MetroBabelFileMetadata} from 'metro-babel-transformer';
 
@@ -22,14 +23,14 @@ const {
 } = require('../generateFunctionMap');
 const {transformFromAstSync} = require('@babel/core');
 const {parse} = require('@babel/parser');
-const traverse = require('@babel/traverse').default;
 const STANDARDIZED_TYPES: Array<BabelNodeStandardized> =
-  // $FlowIgnore[prop-missing]
-  // $FlowIgnore[incompatible-type]
+  // $FlowFixMe[prop-missing]
+  // $FlowFixMe[incompatible-type]
+  // $FlowFixMe[missing-export]
   require('@babel/types').STANDARDIZED_TYPES;
 const {
   SourceMetadataMapConsumer,
-} = require('metro-symbolicate/src/Symbolication');
+} = require('metro-symbolicate/private/Symbolication');
 
 function getAst(source: string) {
   return parse(source, {
@@ -1358,7 +1359,7 @@ function parent2() {
 
   test('omit parent class name when it matches filename', () => {
     const ast = getAst('class FooBar { baz() {} }');
-    const context = {filename: 'FooBar.ios.js'};
+    const context: Context = {filename: 'FooBar.ios.js'};
 
     expect(generateCompactRawMappings(ast, context)).toMatchInlineSnapshot(`
       "
@@ -1380,7 +1381,7 @@ function parent2() {
 
   test('do not omit parent class name when it only partially matches filename', () => {
     const ast = getAst('class FooBarItem { baz() {} }');
-    const context = {filename: 'FooBar.ios.js'};
+    const context: Context = {filename: 'FooBar.ios.js'};
 
     expect(generateCompactRawMappings(ast, context)).toMatchInlineSnapshot(`
       "
@@ -1402,7 +1403,7 @@ function parent2() {
 
   test('derive name from simple assignment even if it matches the filename', () => {
     const ast = getAst('var FooBar = () => {}');
-    const context = {filename: 'FooBar.ios.js'};
+    const context: Context = {filename: 'FooBar.ios.js'};
 
     expect(generateCompactRawMappings(ast, context)).toMatchInlineSnapshot(`
       "
@@ -1435,10 +1436,10 @@ function parent2() {
     const mappings = generateFunctionMappingsArray(ast);
     const encoded = generateFunctionMap(ast);
 
-    const sourceMap = {
+    const sourceMap: MixedSourceMap = {
       version: 3,
       sources: ['input.js'],
-      names: ([]: Array<string>),
+      names: [] as Array<string>,
       mappings: '',
       x_facebook_sources: [[encoded]],
     };
@@ -1794,68 +1795,22 @@ function parent2() {
     });
   });
 
-  describe('@babel/traverse path cache workaround (babel#6437)', () => {
-    /* These tests exist due to the need to work around a Babel issue:
-       https://github.com/babel/babel/issues/6437
-       In short, using `@babel/traverse` outside of a transform context
-       pollutes the cache in such a way as to break subsequent transformation
-       of the same AST.
+  /* We used to have a workaround and full set of tests for
+    https://github.com/babel/babel/issues/6437
+    Using `@babel/traverse` outside of a transform context
+    polluted the cache in such a way as to break subsequent transformation
+    of the same AST, manifesting as "Cannot read properties of undefined
+    (reading 'addHelper')". Since `@babel/traverse@7.29.0`, this is fixed by
+    https://github.com/babel/babel/pull/17672.
 
-       This commonly manifests as: "Cannot read properties of undefined
-       (reading 'addHelper')", and is due to a missing `hub` property normally
-       provided by `@babel/core` but not populated when using `traverse` alone.
-
-       We need to work around this by not mutating the cache on traversal.
-
-       Note though that we must also must be careful to preserve any existing
-       cache, because others (Fast Refresh, Jest) rely on cached properties set
-       on paths. */
-
+    This test is preserved just to ensure that this bug doesn't come back - as
+    it has before in Babel updates.
+ */
+  test('regression test for @babel/traverse bug (babel#6437)', () => {
     // A minimal(?) Babel transformation that requires a `hub`, modelled on
     // `@babel/plugin-transform-modules-commonjs` and the `wrapInterop` call in
     // `@babel/helper-module-transforms`
-    const expectTransformPathesToHaveHub = (ast: BabelNodeFile) => {
-      let enterCount = 0;
-
-      const enter = (path: NodePath<BabelNode>) => {
-        enterCount++;
-        expect(path.hub).toBeDefined();
-      };
-
-      transformFromAstSync(ast, '', {
-        plugins: [
-          () => ({
-            visitor: Object.fromEntries(
-              STANDARDIZED_TYPES.map(type => [type, {enter}]),
-            ) /** equivalent to:
-            visitor: {
-              "FunctionDeclaration": {
-                enter: (path: NodePath<BabelNode>) => {
-                  enterCount++;
-                  expect(path.hub).toBeDefined();
-                }
-              },
-              "Program": {
-                enter: (path: NodePath<BabelNode>) => {
-                  enterCount++;
-                  expect(path.hub).toBeDefined();
-                },
-              },
-              // ... the rest of all the possible ast node types
-              //
-            } **/,
-          }),
-        ],
-        babelrc: false,
-        cloneInputAst: false,
-      });
-      expect(enterCount).toBe(61);
-    };
-
-    let ast;
-
-    beforeEach(() => {
-      ast = getAst(`
+    const ast = getAst(`
 window.foo = function bar() {
   return false || {
     a: {
@@ -1875,53 +1830,43 @@ window.foo = function bar() {
 }
 window.foo();
       `);
-      traverse.cache.clearPath();
+
+    generateFunctionMap(ast);
+
+    let enterCount = 0;
+
+    const enter = (path: NodePath<BabelNode>) => {
+      enterCount++;
+      expect(path.hub).toBeDefined();
+    };
+
+    transformFromAstSync(ast, '', {
+      plugins: [
+        () => ({
+          visitor: Object.fromEntries(
+            STANDARDIZED_TYPES.map(type => [type, {enter}]),
+          ) /** equivalent to:
+            visitor: {
+              "FunctionDeclaration": {
+                enter: (path: NodePath<BabelNode>) => {
+                  enterCount++;
+                  expect(path.hub).toBeDefined();
+                }
+              },
+              "Program": {
+                enter: (path: NodePath<BabelNode>) => {
+                  enterCount++;
+                  expect(path.hub).toBeDefined();
+                },
+              },
+              // ... the rest of all the possible ast node types
+              //
+            } **/,
+        }),
+      ],
+      babelrc: false,
+      cloneInputAst: false,
     });
-
-    test('transform with no traverse has `hub` in every node', () => {
-      /* Ensures that our expectations of how transform works regardless
-       of the existence of a traverse cache pollution issue are correct.
-       Namely- that each node is expected to have a hub present.
-       If this fails, it means that "hub" is no longer expected to
-       exist on each node, and the pollution tests bellow has to be adjusted. */
-      expectTransformPathesToHaveHub(ast);
-    });
-
-    test('requires a workaround for traverse cache pollution', () => {
-      /* If this test fails, it likely means either:
-         1. There are multiple copies of `@babel/traverse` in node_modules, and
-            the one used by `@babel/core` is not the one used by this test.
-            This masks the issue, and probably means you should deduplicate
-            yarn.lock.
-         2. https://github.com/babel/babel/issues/6437 has been fixed upstream,
-            In that case, we should be able to remove cache-related hacks
-            around `traverse` from generateFunctionMap, and these tests. */
-
-      // Perform a trivial traversal.
-      traverse(ast, {});
-
-      // Expect that the path cache is polluted with entries lacking `hub`.
-      expect(() => expectTransformPathesToHaveHub(ast)).toThrow();
-    });
-
-    test('successfully works around traverse cache pollution', () => {
-      generateFunctionMap(ast);
-
-      // Check that the `hub` property is present on paths when transforming.
-      expectTransformPathesToHaveHub(ast);
-    });
-
-    test('does not reset the path cache', () => {
-      const dummyCache: Map<mixed, mixed> = new Map();
-      // $FlowIgnore[prop-missing] - Writing to readonly map for test purposes.
-      traverse.cache.path.set(ast, dummyCache);
-
-      generateFunctionMap(ast);
-
-      // Check that we're not working around the issue by clearing the cache -
-      // that causes problems elsewhere.
-      expect(traverse.cache.path.get(ast)).toBe(dummyCache);
-      expect(dummyCache.size).toBe(0);
-    });
+    expect(enterCount).toBe(61);
   });
 });

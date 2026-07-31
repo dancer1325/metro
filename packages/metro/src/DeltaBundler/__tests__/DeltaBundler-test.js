@@ -9,13 +9,12 @@
  * @oncall react_native
  */
 
-'use strict';
+import type {MixedOutput, Options, TransformResultDependency} from '../types';
 
-import type {TransformResultDependency} from '../types.flow';
+import DeltaBundler from '../../DeltaBundler';
+import DeltaCalculator from '../DeltaCalculator';
 
-const DeltaBundler = require('../../DeltaBundler');
-const DeltaCalculator = require('../DeltaCalculator');
-const {EventEmitter} = require('events');
+const {EventEmitter} = require('node:events');
 
 jest.mock('../DeltaCalculator');
 
@@ -30,9 +29,10 @@ describe('DeltaBundler', () => {
     entryPoints: ['/entry'],
   };
 
-  const options = {
+  const options: Options<MixedOutput> = {
     unstable_allowRequireContext: false,
     unstable_enablePackageExports: false,
+    unstable_incrementalResolution: false,
     lazy: false,
     onProgress: null,
     resolve: (from: string, dependency: TransformResultDependency) => {
@@ -45,7 +45,6 @@ describe('DeltaBundler', () => {
     transformOptions: {
       // NOTE: These options are ignored because we mock out the transformer (via DeltaCalculator).
       dev: false,
-      hot: false,
       minify: false,
       platform: null,
       type: 'module',

@@ -1,9 +1,11 @@
 [ignore]
-<PROJECT_ROOT>/packages/.*/build/.*
-<PROJECT_ROOT>/\.hg/.*
+glob:packages/*/build/**
+glob:.hg/**
+glob:.sl/**
+glob:.git/**
 # this transient dep bundles tests with their package, which flow attempts to parse
 # and crashes out as the test includes purposely malformed json
-<PROJECT_ROOT>\(/.*\)?/node_modules/resolve/test/.*
+glob:**/node_modules/resolve/test/**
 
 [options]
 emoji=true
@@ -11,16 +13,8 @@ emoji=true
 format.bracket_spacing=false
 
 munge_underscores=true
-enums=true
 
 module.name_mapper='\(metro-[^/]*\)' -> '<PROJECT_ROOT>/packages/\1/src/index.js'
-
-suppress_type=$FlowIssue
-suppress_type=$FlowFixMe
-suppress_type=$FlowFixMeProps
-suppress_type=$FlowFixMeState
-suppress_type=$FlowFixMeEmpty
-suppress_type=$FlowExpectedError
 
 [lints]
 sketchy-null-number=warn
@@ -43,4 +37,4 @@ untyped-import
 untyped-type-import
 
 [version]
-^0.257.1
+^0.325.0

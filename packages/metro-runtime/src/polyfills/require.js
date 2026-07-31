@@ -20,10 +20,11 @@ declare var __METRO_GLOBAL_PREFIX__: string;
 // A simpler $ArrayLike<T>. Not iterable and doesn't have a `length`.
 // This is compatible with actual arrays as well as with objects that look like
 // {0: 'value', 1: '...'}
-type ArrayIndexable<T> = interface {
-  +[indexer: number]: T,
-};
-type DependencyMap = $ReadOnly<
+type ArrayIndexable<T> = Readonly<{
+  [indexer: number]: T,
+  ...
+}>;
+type DependencyMap = Readonly<
   ArrayIndexable<ModuleID> & {
     paths?: {[id: ModuleID]: string},
   },
@@ -80,8 +81,8 @@ export type DefineFn = (
 type VerboseModuleNameForDev = string;
 type ModuleDefiner = (moduleId: ModuleID) => void;
 
-global.__r = (metroRequire: RequireFn);
-global[`${__METRO_GLOBAL_PREFIX__}__d`] = (define: DefineFn);
+global.__r = metroRequire as RequireFn;
+global[`${__METRO_GLOBAL_PREFIX__}__d`] = define as DefineFn;
 global.__c = clear;
 global.__registerSegment = registerSegment;
 
@@ -94,8 +95,8 @@ const CYCLE_DETECTED = {};
 const {hasOwnProperty} = {};
 
 if (__DEV__) {
-  global.$RefreshReg$ = () => {};
-  global.$RefreshSig$ = () => type => type;
+  global.$RefreshReg$ = global.$RefreshReg$ ?? (() => {});
+  global.$RefreshSig$ = global.$RefreshSig$ ?? (() => type => type);
 }
 
 function clear(): ModuleList {
@@ -169,7 +170,19 @@ function define(
   }
 }
 
-function metroRequire(moduleId: ModuleID | VerboseModuleNameForDev): Exports {
+function metroRequire(
+  moduleId: ModuleID | VerboseModuleNameForDev | null,
+  maybeNameForDev?: string,
+): Exports {
+  // Unresolved optional dependencies are nulls in dependency maps
+  // eslint-disable-next-line lint/strictly-null
+  if (moduleId === null) {
+    if (__DEV__ && typeof maybeNameForDev === 'string') {
+      throw new Error("Cannot find module '" + maybeNameForDev + "'");
+    }
+    throw new Error('Cannot find module');
+  }
+
   if (__DEV__ && typeof moduleId === 'string') {
     const verboseName = moduleId;
     moduleId = getModuleIdForVerboseName(verboseName);
@@ -179,7 +192,7 @@ function metroRequire(moduleId: ModuleID | VerboseModuleNameForDev): Exports {
     );
   }
 
-  //$FlowFixMe: at this point we know that moduleId is a number
+  //$FlowFixMe[incompatible-type]: at this point we know that moduleId is a number
   const moduleIdReallyIsNumber: number = moduleId;
 
   if (__DEV__) {
@@ -210,7 +223,7 @@ function metroRequire(moduleId: ModuleID | VerboseModuleNameForDev): Exports {
 
 // We print require cycles unless they match a pattern in the
 // `requireCycleIgnorePatterns` configuration.
-function shouldPrintRequireCycle(modules: $ReadOnlyArray<?string>): boolean {
+function shouldPrintRequireCycle(modules: ReadonlyArray<?string>): boolean {
   const regExps =
     global[__METRO_GLOBAL_PREFIX__ + '__requireCycleIgnorePatterns'];
   if (!Array.isArray(regExps)) {
@@ -232,7 +245,7 @@ function metroImportDefault(
     moduleId = getModuleIdForVerboseName(verboseName);
   }
 
-  //$FlowFixMe: at this point we know that moduleId is a number
+  //$FlowFixMe[incompatible-type]: at this point we know that moduleId is a number
   const moduleIdReallyIsNumber: number = moduleId;
 
   const maybeInitializedModule = modules.get(moduleIdReallyIsNumber);
@@ -264,7 +277,7 @@ function metroImportAll(
     moduleId = getModuleIdForVerboseName(verboseName);
   }
 
-  //$FlowFixMe: at this point we know that moduleId is a number
+  //$FlowFixMe[incompatible-type]: at this point we know that moduleId is a number
   const moduleIdReallyIsNumber: number = moduleId;
 
   const maybeInitializedModule = modules.get(moduleIdReallyIsNumber);
@@ -279,7 +292,7 @@ function metroImportAll(
   if (exports && exports.__esModule) {
     importedAll = exports;
   } else {
-    importedAll = ({}: {[string]: any});
+    importedAll = {} as {[string]: any};
 
     // Refrain from using Object.assign, it has to work in ES3 environments.
     if (exports) {
@@ -375,7 +388,7 @@ const definingSegmentByModuleID: Map<ModuleID, number> = new Map();
 function registerSegment(
   segmentId: number,
   moduleDefiner: ModuleDefiner,
-  moduleIds: ?$ReadOnlyArray<ModuleID>,
+  moduleIds: ?ReadonlyArray<ModuleID>,
 ): void {
   moduleDefinersBySegmentID[segmentId] = moduleDefiner;
   if (__DEV__) {
@@ -445,7 +458,7 @@ function loadModuleImplementation(
   }
   try {
     if (__DEV__) {
-      // $FlowIgnore: we know that __DEV__ is const and `Systrace` exists
+      // $FlowFixMe[incompatible-use]: we know that __DEV__ is const and `Systrace` exists
       Systrace.beginEvent('JS_require_' + (module.verboseName || moduleId));
     }
 
@@ -459,7 +472,10 @@ function loadModuleImplementation(
       if (Refresh != null) {
         const RefreshRuntime = Refresh;
         global.$RefreshReg$ = (type, id) => {
-          RefreshRuntime.register(type, moduleId + ' ' + id);
+          // prefix the id with global prefix to enable multiple HMR clients
+          const prefixedModuleId =
+            __METRO_GLOBAL_PREFIX__ + ' ' + moduleId + ' ' + id;
+          RefreshRuntime.register(type, prefixedModuleId);
         };
         global.$RefreshSig$ =
           RefreshRuntime.createSignatureFunctionForTransform;
@@ -482,17 +498,23 @@ function loadModuleImplementation(
 
     // avoid removing factory in DEV mode as it breaks HMR
     if (!__DEV__) {
-      // $FlowFixMe: This is only sound because we never access `factory` again
+      // $FlowFixMe[incompatible-type]: This is only sound because we never access `factory` again
       module.factory = undefined;
       module.dependencyMap = undefined;
     }
 
     if (__DEV__) {
-      // $FlowIgnore: we know that __DEV__ is const and `Systrace` exists
+      // $FlowFixMe[incompatible-use]: we know that __DEV__ is const and `Systrace` exists
       Systrace.endEvent();
 
       if (Refresh != null) {
-        registerExportsForReactRefresh(Refresh, moduleObject.exports, moduleId);
+        // prefix the id with global prefix to enable multiple HMR clients
+        const prefixedModuleId = __METRO_GLOBAL_PREFIX__ + ' ' + moduleId;
+        registerExportsForReactRefresh(
+          Refresh,
+          moduleObject.exports,
+          prefixedModuleId,
+        );
       }
     }
 
@@ -564,11 +586,35 @@ if (__DEV__) {
   ) {
     const mod = modules.get(id);
     if (!mod) {
+      /* $FlowFixMe[constant-condition] Error discovered during Constant
+       * Condition roll out. See https://fburl.com/workplace/1v97vimq. */
       if (factory) {
         // New modules are going to be handled by the define() method.
         return;
       }
       throw unknownModuleError(id);
+    }
+
+    // Some modules have known issues with hot reloading where their side effects
+    // (such as style registration) don't properly re-execute in the correct
+    // dependency order. The `unstable_forceFullRefreshPatterns` configuration allows
+    // specifying patterns for modules that should trigger a full refresh
+    // instead of attempting hot reload.
+    const forceFullRefreshPatterns =
+      global[__METRO_GLOBAL_PREFIX__ + '__unstable_forceFullRefreshPatterns'];
+
+    if (
+      forceFullRefreshPatterns != null &&
+      Array.isArray(forceFullRefreshPatterns) &&
+      mod.verboseName != null &&
+      forceFullRefreshPatterns.some(pattern =>
+        pattern.test(mod.verboseName ?? ''),
+      )
+    ) {
+      performFullRefresh('Module matched unstable_forceFullRefreshPatterns', {
+        source: mod,
+      });
+      return;
     }
 
     if (!mod.hasError && !mod.isInitialized) {
@@ -776,8 +822,8 @@ if (__DEV__) {
     earlyStop: T => boolean,
   ): Array<T> {
     const result = [];
-    const visited = new Set<mixed>();
-    const stack = new Set<mixed>();
+    const visited = new Set<unknown>();
+    const stack = new Set<unknown>();
     function traverseDependentNodes(node: T): void {
       if (stack.has(node)) {
         throw CYCLE_DETECTED;
@@ -879,7 +925,7 @@ if (__DEV__) {
 
   const performFullRefresh = (
     reason: string,
-    modules: $ReadOnly<{
+    modules: Readonly<{
       source?: ModuleDefinition,
       failed?: ModuleDefinition,
     }>,
@@ -888,6 +934,7 @@ if (__DEV__) {
     if (
       typeof window !== 'undefined' &&
       window.location != null &&
+      // $FlowFixMe[method-unbinding]
       typeof window.location.reload === 'function'
     ) {
       window.location.reload();
@@ -903,6 +950,21 @@ if (__DEV__) {
         console.warn('Could not reload the application after an edit.');
       }
     }
+  };
+
+  // Check whether accessing an export may be side-effectful
+  const isExportSafeToAccess = (
+    moduleExports: Exports,
+    key: string,
+  ): boolean => {
+    return (
+      // Transformed ESM syntax uses getters to support live bindings - we
+      // consider those safe. ESM itself does not allow user-defined getters
+      // on exports.
+      moduleExports?.__esModule ||
+      // CommonJS modules exporting getters may have side-effects.
+      Object.getOwnPropertyDescriptor(moduleExports, key)?.get == null
+    );
   };
 
   // Modules that only export components become React Refresh boundaries.
@@ -923,9 +985,7 @@ if (__DEV__) {
       hasExports = true;
       if (key === '__esModule') {
         continue;
-      }
-      const desc = Object.getOwnPropertyDescriptor<any>(moduleExports, key);
-      if (desc && desc.get) {
+      } else if (!isExportSafeToAccess(moduleExports, key)) {
         // Don't invoke getters as they may have side effects.
         return false;
       }
@@ -959,7 +1019,7 @@ if (__DEV__) {
   var getRefreshBoundarySignature = (
     Refresh: any,
     moduleExports: Exports,
-  ): Array<mixed> => {
+  ): Array<unknown> => {
     const signature = [];
     signature.push(Refresh.getFamilyByType(moduleExports));
     if (moduleExports == null || typeof moduleExports !== 'object') {
@@ -970,9 +1030,7 @@ if (__DEV__) {
     for (const key in moduleExports) {
       if (key === '__esModule') {
         continue;
-      }
-      const desc = Object.getOwnPropertyDescriptor<any>(moduleExports, key);
-      if (desc && desc.get) {
+      } else if (!isExportSafeToAccess(moduleExports, key)) {
         continue;
       }
       const exportValue = moduleExports[key];
@@ -985,7 +1043,7 @@ if (__DEV__) {
   var registerExportsForReactRefresh = (
     Refresh: any,
     moduleExports: Exports,
-    moduleID: ModuleID,
+    moduleID: string,
   ) => {
     Refresh.register(moduleExports, moduleID + ' %exports%');
     if (moduleExports == null || typeof moduleExports !== 'object') {
@@ -994,8 +1052,7 @@ if (__DEV__) {
       return;
     }
     for (const key in moduleExports) {
-      const desc = Object.getOwnPropertyDescriptor<any>(moduleExports, key);
-      if (desc && desc.get) {
+      if (!isExportSafeToAccess(moduleExports, key)) {
         // Don't invoke getters as they may have side effects.
         continue;
       }
@@ -1023,9 +1080,16 @@ if (__DEV__) {
   };
 
   var requireRefresh = function requireRefresh() {
+    // __METRO_GLOBAL_PREFIX__ and global.__METRO_GLOBAL_PREFIX__ differ from
+    // each other when multiple module systems are used - e.g, in the context
+    // of Module Federation, the first one would refer to the local prefix
+    // defined at the top of the bundle, while the other always refers to the
+    // one coming from the Host
     return (
+      global[__METRO_GLOBAL_PREFIX__ + '__ReactRefresh'] ||
+      global[global.__METRO_GLOBAL_PREFIX__ + '__ReactRefresh'] ||
       // $FlowFixMe[prop-missing]
-      global[__METRO_GLOBAL_PREFIX__ + '__ReactRefresh'] || metroRequire.Refresh
+      metroRequire.Refresh
     );
   };
 }

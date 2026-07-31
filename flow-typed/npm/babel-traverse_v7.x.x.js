@@ -6,7 +6,6 @@
  *
  * @flow
  * @format
- * @oncall react_native
  */
 
 // The sections between BEGIN GENERATED and END GENERATED are generated
@@ -26,7 +25,7 @@ declare module '@babel/traverse' {
     getCode(): ?string;
     getScope(): ?Scope;
     addHelper(name: string): {};
-    buildError<TError: Error>(
+    buildError<TError extends Error>(
       node: BabelNode,
       msg: string,
       Error: Class<TError>,
@@ -38,7 +37,7 @@ declare module '@babel/traverse' {
     getCode(): ?string;
     getScope(): ?Scope;
     addHelper(name: string): {};
-    buildError<TError: Error>(
+    buildError<TError extends Error>(
       node: BabelNode,
       msg: string,
       Error: Class<TError>,
@@ -54,7 +53,7 @@ declare module '@babel/traverse' {
 
     constructor(
       scope: Scope,
-      opts: TraverseOptions<mixed>,
+      opts: TraverseOptions<unknown>,
       state: any,
       parentPath: NodePath<>,
     ): TraversalContext;
@@ -98,7 +97,7 @@ declare module '@babel/traverse' {
     /** Traverse node with current scope and path. */
     traverse<S>(
       node: BabelNode | Array<BabelNode>,
-      opts: $ReadOnly<TraverseOptions<S>>,
+      opts: Readonly<TraverseOptions<S>>,
       state: S,
     ): void;
 
@@ -247,12 +246,7 @@ declare module '@babel/traverse' {
   }
 
   declare export type BindingKind =
-    | 'var'
-    | 'let'
-    | 'const'
-    | 'module'
-    | 'hoisted'
-    | 'unknown';
+    'var' | 'let' | 'const' | 'module' | 'hoisted' | 'unknown';
 
   declare export class Binding {
     constructor(opts: {
@@ -295,16 +289,16 @@ declare module '@babel/traverse' {
 
   declare type Opts = {...};
 
-  declare export class NodePath<+TNode: BabelNode = BabelNode> {
+  declare export class NodePath<+TNode extends BabelNode = BabelNode> {
     parent: BabelNode;
     hub: HubInterface;
     contexts: Array<TraversalContext>;
-    data: {[key: string]: mixed} | null;
+    data: {[key: string]: unknown} | null;
     shouldSkip: boolean;
     shouldStop: boolean;
     removed: boolean;
-    state: mixed;
-    +opts: $ReadOnly<TraverseOptions<mixed>> | null;
+    state: unknown;
+    +opts: Readonly<TraverseOptions<unknown>> | null;
     skipKeys: null | {[key: string]: boolean};
     parentPath: ?NodePath<>;
     context: TraversalContext;
@@ -339,15 +333,15 @@ declare module '@babel/traverse' {
     getScope(scope: Scope): Scope;
 
     setData<TVal>(key: string, val: TVal): TVal;
-    getData<TVal = mixed>(key: string, def?: TVal): TVal;
+    getData<TVal = unknown>(key: string, def?: TVal): TVal;
 
-    buildCodeFrameError<TError: Error>(
+    buildCodeFrameError<TError extends Error>(
       msg: string,
       Error?: Class<TError>,
     ): TError;
 
     traverse<TState>(
-      visitor: $ReadOnly<TraverseOptions<TState>>,
+      visitor: Readonly<TraverseOptions<TState>>,
       state: TState,
     ): void;
 
@@ -391,9 +385,7 @@ declare module '@babel/traverse' {
      * Earliest is defined as being "before" all the other nodes in terms of list container
      * position and visiting key.
      */
-    getEarliestCommonAncestorFrom(
-      paths: $ReadOnlyArray<NodePath<>>,
-    ): NodePath<>;
+    getEarliestCommonAncestorFrom(paths: ReadonlyArray<NodePath<>>): NodePath<>;
 
     /**
      * Get the earliest path in the tree where the provided `paths` intersect.
@@ -401,7 +393,7 @@ declare module '@babel/traverse' {
      * TODO: Possible optimisation target.
      */
     getDeepestCommonAncestorFrom(
-      paths: $ReadOnlyArray<NodePath<>>,
+      paths: ReadonlyArray<NodePath<>>,
       filter?: (
         lastCommon: BabelNode,
         lastCommonIndex: number,
@@ -438,13 +430,7 @@ declare module '@babel/traverse' {
     isBaseType(baseName: string, soft?: boolean): boolean;
     couldBeBaseType(
       name:
-        | 'string'
-        | 'number'
-        | 'boolean'
-        | 'any'
-        | 'mixed'
-        | 'empty'
-        | 'void',
+        'string' | 'number' | 'boolean' | 'any' | 'mixed' | 'empty' | 'void',
     ): boolean;
     baseTypeStrictlyMatches(right: NodePath<>): ?boolean;
     isGenericType(genericName: string): boolean;
@@ -559,24 +545,24 @@ declare module '@babel/traverse' {
      * Check whether we have the input `key`. If the `key` references an array then we check
      * if the array has any items, otherwise we just check if it's falsy.
      */
-    has(key: $Keys<TNode>): boolean;
+    has(key: keyof TNode): boolean;
 
     isStatic(): boolean;
 
     /**
      * Alias of `has`.
      */
-    is(key: $Keys<TNode>): boolean;
+    is(key: keyof TNode): boolean;
 
     /**
      * Opposite of `has`.
      */
-    isnt(key: $Keys<TNode>): boolean;
+    isnt(key: keyof TNode): boolean;
 
     /**
      * Check whether the path node `key` strict equals `value`.
      */
-    equals(key: $Keys<TNode>, value: any): boolean;
+    equals(key: keyof TNode, value: any): boolean;
 
     /**
      * Check the type against our stored internal type of the node. This is handy when a node has
@@ -727,7 +713,7 @@ declare module '@babel/traverse' {
 
     getAllPrevSiblings(): Array<NodePath<>>;
 
-    get<TKey: $Keys<TNode>>(
+    get<TKey extends keyof TNode>(
       key: TKey,
       context?: boolean | TraversalContext,
     ): TNode[TKey] extends BabelNode ? NodePath<> : Array<NodePath<>>;
@@ -888,6 +874,7 @@ declare module '@babel/traverse' {
     isFunction(opts?: Opts): boolean;
     isFunctionDeclaration(opts?: Opts): boolean;
     isFunctionExpression(opts?: Opts): boolean;
+    isFunctionParameter(opts?: Opts): boolean;
     isFunctionParent(opts?: Opts): boolean;
     isFunctionTypeAnnotation(opts?: Opts): boolean;
     isFunctionTypeParam(opts?: Opts): boolean;
@@ -1016,6 +1003,7 @@ declare module '@babel/traverse' {
     isTSDeclareFunction(opts?: Opts): boolean;
     isTSDeclareMethod(opts?: Opts): boolean;
     isTSEntityName(opts?: Opts): boolean;
+    isTSEnumBody(opts?: Opts): boolean;
     isTSEnumDeclaration(opts?: Opts): boolean;
     isTSEnumMember(opts?: Opts): boolean;
     isTSExportAssignment(opts?: Opts): boolean;
@@ -1053,6 +1041,7 @@ declare module '@babel/traverse' {
     isTSSatisfiesExpression(opts?: Opts): boolean;
     isTSStringKeyword(opts?: Opts): boolean;
     isTSSymbolKeyword(opts?: Opts): boolean;
+    isTSTemplateLiteralType(opts?: Opts): boolean;
     isTSThisType(opts?: Opts): boolean;
     isTSTupleType(opts?: Opts): boolean;
     isTSType(opts?: Opts): boolean;
@@ -1102,6 +1091,7 @@ declare module '@babel/traverse' {
     isVariableDeclaration(opts?: Opts): boolean;
     isVariableDeclarator(opts?: Opts): boolean;
     isVariance(opts?: Opts): boolean;
+    isVoidPattern(opts?: Opts): boolean;
     isVoidTypeAnnotation(opts?: Opts): boolean;
     isWhile(opts?: Opts): boolean;
     isWhileStatement(opts?: Opts): boolean;
@@ -1205,6 +1195,7 @@ declare module '@babel/traverse' {
     assertFunction(opts?: Opts): void;
     assertFunctionDeclaration(opts?: Opts): void;
     assertFunctionExpression(opts?: Opts): void;
+    assertFunctionParameter(opts?: Opts): void;
     assertFunctionParent(opts?: Opts): void;
     assertFunctionTypeAnnotation(opts?: Opts): void;
     assertFunctionTypeParam(opts?: Opts): void;
@@ -1333,6 +1324,7 @@ declare module '@babel/traverse' {
     assertTSDeclareFunction(opts?: Opts): void;
     assertTSDeclareMethod(opts?: Opts): void;
     assertTSEntityName(opts?: Opts): void;
+    assertTSEnumBody(opts?: Opts): void;
     assertTSEnumDeclaration(opts?: Opts): void;
     assertTSEnumMember(opts?: Opts): void;
     assertTSExportAssignment(opts?: Opts): void;
@@ -1370,6 +1362,7 @@ declare module '@babel/traverse' {
     assertTSSatisfiesExpression(opts?: Opts): void;
     assertTSStringKeyword(opts?: Opts): void;
     assertTSSymbolKeyword(opts?: Opts): void;
+    assertTSTemplateLiteralType(opts?: Opts): void;
     assertTSThisType(opts?: Opts): void;
     assertTSTupleType(opts?: Opts): void;
     assertTSType(opts?: Opts): void;
@@ -1419,6 +1412,7 @@ declare module '@babel/traverse' {
     assertVariableDeclaration(opts?: Opts): void;
     assertVariableDeclarator(opts?: Opts): void;
     assertVariance(opts?: Opts): void;
+    assertVoidPattern(opts?: Opts): void;
     assertVoidTypeAnnotation(opts?: Opts): void;
     assertWhile(opts?: Opts): void;
     assertWhileStatement(opts?: Opts): void;
@@ -1427,21 +1421,23 @@ declare module '@babel/traverse' {
     // END GENERATED NODE PATH METHODS
   }
 
-  declare export type VisitNodeFunction<-TNode: BabelNode, TState> = (
+  declare export type VisitNodeFunction<-TNode extends BabelNode, TState> = (
     path: NodePath<TNode>,
     state: TState,
   ) => void;
 
-  declare export type VisitNodeObject<-TNode: BabelNode, TState> = Partial<{
+  declare export type VisitNodeObject<
+    -TNode extends BabelNode,
+    TState,
+  > = Partial<{
     enter(path: NodePath<TNode>, state: TState): void,
     exit(path: NodePath<TNode>, state: TState): void,
   }>;
 
-  declare export type VisitNode<-TNode: BabelNode, TState> =
-    | VisitNodeFunction<TNode, TState>
-    | VisitNodeObject<TNode, TState>;
+  declare export type VisitNode<-TNode extends BabelNode, TState> =
+    VisitNodeFunction<TNode, TState> | VisitNodeObject<TNode, TState>;
 
-  declare export type Visitor<TState = void> = $ReadOnly<{
+  declare export type Visitor<TState = void> = Readonly<{
     enter?: VisitNodeFunction<BabelNode, TState>,
     exit?: VisitNodeFunction<BabelNode, TState>,
 
@@ -1563,6 +1559,7 @@ declare module '@babel/traverse' {
     Function?: VisitNode<BabelNodeFunction, TState>,
     FunctionDeclaration?: VisitNode<BabelNodeFunctionDeclaration, TState>,
     FunctionExpression?: VisitNode<BabelNodeFunctionExpression, TState>,
+    FunctionParameter?: VisitNode<BabelNodeFunctionParameter, TState>,
     FunctionParent?: VisitNode<BabelNodeFunctionParent, TState>,
     FunctionTypeAnnotation?: VisitNode<BabelNodeFunctionTypeAnnotation, TState>,
     FunctionTypeParam?: VisitNode<BabelNodeFunctionTypeParam, TState>,
@@ -1739,6 +1736,7 @@ declare module '@babel/traverse' {
     TSDeclareFunction?: VisitNode<BabelNodeTSDeclareFunction, TState>,
     TSDeclareMethod?: VisitNode<BabelNodeTSDeclareMethod, TState>,
     TSEntityName?: VisitNode<BabelNodeTSEntityName, TState>,
+    TSEnumBody?: VisitNode<BabelNodeTSEnumBody, TState>,
     TSEnumDeclaration?: VisitNode<BabelNodeTSEnumDeclaration, TState>,
     TSEnumMember?: VisitNode<BabelNodeTSEnumMember, TState>,
     TSExportAssignment?: VisitNode<BabelNodeTSExportAssignment, TState>,
@@ -1791,6 +1789,7 @@ declare module '@babel/traverse' {
     TSSatisfiesExpression?: VisitNode<BabelNodeTSSatisfiesExpression, TState>,
     TSStringKeyword?: VisitNode<BabelNodeTSStringKeyword, TState>,
     TSSymbolKeyword?: VisitNode<BabelNodeTSSymbolKeyword, TState>,
+    TSTemplateLiteralType?: VisitNode<BabelNodeTSTemplateLiteralType, TState>,
     TSThisType?: VisitNode<BabelNodeTSThisType, TState>,
     TSTupleType?: VisitNode<BabelNodeTSTupleType, TState>,
     TSType?: VisitNode<BabelNodeTSType, TState>,
@@ -1855,6 +1854,7 @@ declare module '@babel/traverse' {
     VariableDeclaration?: VisitNode<BabelNodeVariableDeclaration, TState>,
     VariableDeclarator?: VisitNode<BabelNodeVariableDeclarator, TState>,
     Variance?: VisitNode<BabelNodeVariance, TState>,
+    VoidPattern?: VisitNode<BabelNodeVoidPattern, TState>,
     VoidTypeAnnotation?: VisitNode<BabelNodeVoidTypeAnnotation, TState>,
     While?: VisitNode<BabelNodeWhile, TState>,
     WhileStatement?: VisitNode<BabelNodeWhileStatement, TState>,
@@ -1867,7 +1867,7 @@ declare module '@babel/traverse' {
     explode<TState>(visitor: Visitor<TState>): Visitor<TState>,
     verify<TState>(visitor: Visitor<TState>): void,
     merge(
-      visitors: Array<$ReadOnly<Visitor<any>>>,
+      visitors: Array<Readonly<Visitor<any>>>,
       states: Array<any>,
       wrapper?: ?Function,
     ): Array<Visitor<any>>,
@@ -1876,8 +1876,8 @@ declare module '@babel/traverse' {
   declare export var visitors: Visitors;
 
   declare export type Cache = {
-    path: $ReadOnlyWeakMap<BabelNode, mixed>,
-    scope: $ReadOnlyWeakMap<BabelNode, mixed>,
+    path: $ReadOnlyWeakMap<BabelNode, unknown>,
+    scope: $ReadOnlyWeakMap<BabelNode, unknown>,
     clear(): void,
     clearPath(): void,
     clearScope(): void,
@@ -1886,7 +1886,7 @@ declare module '@babel/traverse' {
   declare export type Traverse = {
     <TState>(
       parent?: BabelNode | Array<BabelNode>,
-      opts?: $ReadOnly<TraverseOptions<TState>>,
+      opts?: Readonly<TraverseOptions<TState>>,
       scope?: ?Scope,
       state: TState,
       parentPath?: ?NodePath<BabelNode>,
@@ -1904,7 +1904,7 @@ declare module '@babel/traverse' {
 
     node<TState>(
       node: BabelNode,
-      opts: $ReadOnly<TraverseOptions<TState>>,
+      opts: Readonly<TraverseOptions<TState>>,
       scope: Scope,
       state: TState,
       parentPath: NodePath<>,

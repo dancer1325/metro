@@ -19,9 +19,12 @@ import type {
   State,
 } from '../collectDependencies';
 import type {NodePath} from '@babel/traverse';
+import type {MetroBabelFileMetadata} from 'metro-babel-transformer';
 
-const {codeFromAst, comparableCode} = require('../../test-helpers');
-const collectDependencies = require('../collectDependencies');
+import collectDependencies from '../collectDependencies';
+
+const {importLocationsPlugin, locToKey} = require('../importLocationsPlugin');
+const {codeFromAst, comparableCode} = require('./test-helpers');
 const {codeFrameColumns} = require('@babel/code-frame');
 const {transformFromAstSync} = require('@babel/core');
 const babylon = require('@babel/parser');
@@ -1210,7 +1213,7 @@ test('records locations of dependencies', () => {
   const ast = astFromCode(code);
 
   // Babel does not guarantee a loc on generated `require()`s.
-  // $FlowFixMe Discovered when typing @babel/parser
+  // $FlowFixMe[incompatible-use] Discovered when typing @babel/parser
   delete ast.program.body[ast.program.body.length - 1].expression.arguments[0]
     .loc;
 
@@ -1296,7 +1299,7 @@ test('integration: records locations of inlined dependencies (Metro ESM)', () =>
   `);
 
   // Verify that dependencies have been inlined into the console.log call.
-  expect(codeFromAst(transformedAst)).toMatch(/^console\.log/);
+  expect(codeFromAst(nullthrows(transformedAst))).toMatch(/^console\.log/);
 });
 
 test('integration: records locations of inlined dependencies (Babel ESM)', () => {
@@ -1346,7 +1349,7 @@ describe('optional dependencies', () => {
     unstable_allowRequireContext: false,
   };
   const validateDependencies = (
-    dependencies: $ReadOnlyArray<Dependency>,
+    dependencies: ReadonlyArray<Dependency>,
     expectedCount: number,
   ) => {
     let hasAsync = false;
@@ -1416,6 +1419,99 @@ describe('optional dependencies', () => {
     const {dependencies} = collectDependencies(ast, opts);
     validateDependencies(dependencies, 4);
   });
+
+  describe('isESMImport', () => {
+    test('distinguishes require calls, static imports and async imports', () => {
+      const ast = astFromCode(`
+        import anImport from '.';
+        const aRequire = require('.');
+        const asyncImport = await import('.');
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      expect(dependencies).toEqual([
+        {
+          // Static import
+          name: '.',
+          data: objectContaining({
+            asyncType: null,
+            isESMImport: true,
+          }),
+        },
+        {
+          // require call
+          name: '.',
+          data: objectContaining({
+            asyncType: null,
+            isESMImport: false,
+          }),
+        },
+        {
+          // await import call
+          name: '.',
+          data: objectContaining({
+            asyncType: 'async',
+            isESMImport: true,
+          }),
+        },
+        objectContaining({
+          // asyncRequire helper
+          name: 'asyncRequire',
+        }),
+      ]);
+    });
+    test('distinguishes ESM imports in single-line files from generated CJS babel runtime helpers', () => {
+      const code = `export { default } from './test'`;
+
+      // Transform the code to make sure `@babel/runtime` helpers are added,
+      // and import locations are collected
+      const {ast, metadata} = transformFromAstSync<MetroBabelFileMetadata>(
+        astFromCode(code),
+        code,
+        {
+          ast: true,
+          plugins: [
+            importLocationsPlugin,
+            // $FlowFixMe[cannot-resolve-module] Untyped Babel plugin
+            require('@babel/plugin-transform-runtime'),
+            // $FlowFixMe[cannot-resolve-module] Untyped Babel plugin in OSS
+            require('@babel/plugin-transform-modules-commonjs'),
+          ],
+        },
+      );
+      if (!ast) {
+        throw new Error(
+          `Transformed AST missing, can't test location-based ESM import detection`,
+        );
+      }
+
+      const importDeclarations = metadata.metro?.unstable_importDeclarationLocs;
+      expect(importDeclarations).toBeTruthy();
+
+      // Collect the dependencies of the generated code
+      const {dependencies} = collectDependencies(ast, {
+        ...opts,
+        unstable_isESMImportAtSource: loc =>
+          !!importDeclarations?.has(locToKey(loc)),
+      });
+      expect(dependencies).toEqual([
+        {
+          // Generated Babel runtime helper
+          name: '@babel/runtime/helpers/interopRequireDefault',
+          data: objectContaining({
+            isESMImport: false,
+          }),
+        },
+        {
+          // Original ESM import
+          name: './test',
+          data: objectContaining({
+            isESMImport: true,
+          }),
+        },
+      ]);
+    });
+  });
+
   test('can handle single-line statement', () => {
     const ast = astFromCode(
       "try { const a = require('optional-a') } catch (e) {}",
@@ -1509,6 +1605,91 @@ describe('optional dependencies', () => {
       {name: 'foo', data: expect.not.objectContaining({isOptional: true})},
     ]);
   });
+
+  describe('dynamic import with rejection handler', () => {
+    test('import().catch(handler) is optional', () => {
+      const ast = astFromCode(`
+        import('optional-async-a').catch(() => {});
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('import().then(handler, onReject) is optional', () => {
+      const ast = astFromCode(`
+        import('optional-async-a').then(() => {}, () => {});
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('import().then(...).then(...).catch(handler) is optional', () => {
+      const ast = astFromCode(`
+        import('optional-async-a')
+          .then(x => x)
+          .then(x => x)
+          .catch(() => {});
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('await import().catch(handler) is optional', () => {
+      const ast = astFromCode(`
+        async function f() {
+          await import('optional-async-a').catch(() => {});
+        }
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('try { await import() } catch {} is optional', () => {
+      const ast = astFromCode(`
+        async function f() {
+          try {
+            await import('optional-async-a');
+          } catch (e) {}
+        }
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('import().then(handler) without onReject is not optional', () => {
+      const ast = astFromCode(`
+        import('not-optional-async-a').then(() => {});
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('import().catch() with no handler argument is not optional', () => {
+      const ast = astFromCode(`
+        import('not-optional-async-a').catch();
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+
+    test('import().then(handler, null) is not optional (null/undefined onReject)', () => {
+      const ast = astFromCode(`
+        import('not-optional-async-a').then(() => {}, null);
+        import('not-optional-async-b').then(() => {}, undefined);
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 3);
+    });
+
+    test('import() detached from chain is not optional', () => {
+      const ast = astFromCode(`
+        const p = import('not-optional-async-a');
+        p.catch(() => {});
+      `);
+      const {dependencies} = collectDependencies(ast, opts);
+      validateDependencies(dependencies, 2);
+    });
+  });
 });
 
 test('uses the dependency transformer specified in the options to transform the dependency calls', () => {
@@ -1556,7 +1737,7 @@ test('collects require.resolveWeak calls', () => {
 });
 
 function formatDependencyLocs(
-  dependencies: $ReadOnlyArray<Dependency>,
+  dependencies: ReadonlyArray<Dependency>,
   code: any,
 ) {
   return (
@@ -1573,7 +1754,10 @@ function formatDependencyLocs(
   );
 }
 
-function adjustPosForCodeFrame(pos: {+column: number, +line: number}) {
+function adjustPosForCodeFrame(pos: {
+  readonly column: number,
+  readonly line: number,
+}) {
   return pos ? {...pos, column: pos.column + 1} : pos;
 }
 

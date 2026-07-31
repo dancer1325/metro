@@ -20,6 +20,7 @@ describe('Cache', () => {
     // eslint-disable-next-line no-eval
     const TempClass = eval(`(class ${name} {})`);
 
+    // $FlowFixMe[unsafe-object-assign]
     return Object.assign(new TempClass(), {
       get: jest.fn().mockImplementation(() => null),
       set: jest.fn(),
@@ -28,7 +29,7 @@ describe('Cache', () => {
 
   beforeEach(() => {
     Logger = require('metro-core').Logger;
-    Cache = require('../Cache');
+    Cache = require('../Cache').default;
 
     Logger.on('log', item => {
       log.push({
@@ -38,9 +39,9 @@ describe('Cache', () => {
       });
     });
 
-    log = ([]: Array<
+    log = [] as Array<
       $FlowFixMe | {a: void | string, l: string, p: void | string},
-    >);
+    >;
   });
 
   afterEach(() => {

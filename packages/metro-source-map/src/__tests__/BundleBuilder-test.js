@@ -13,6 +13,7 @@
 const {BundleBuilder} = require('../BundleBuilder');
 const {Consumer} = require('../source-map');
 const {add0, add1} = require('ob1');
+
 const {objectContaining} = expect;
 
 let builder;
@@ -482,8 +483,8 @@ describe('BundleBuilder', () => {
     const abcMap = {
       version: 3,
       mappings: 'A',
-      names: ([]: Array<string>),
-      sources: ([]: Array<string>),
+      names: [] as Array<string>,
+      sources: [] as Array<string>,
     };
 
     const builderBase = new BundleBuilder('bundle.js');

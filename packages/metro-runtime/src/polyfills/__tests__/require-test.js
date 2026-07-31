@@ -11,7 +11,7 @@
 'use strict';
 
 const {transformSync} = require('@babel/core');
-const fs = require('fs');
+const fs = require('node:fs');
 
 function createModule(
   moduleSystem,
@@ -502,6 +502,38 @@ describe('require', () => {
 
       expect(() => moduleSystem.__r(0)).toThrow(
         'Requiring unknown module "99"',
+      );
+    });
+
+    test('throws "module not found" when trying to require an unresolvable optional dependency', () => {
+      createModuleSystem(moduleSystem, false, '');
+
+      createModule(
+        moduleSystem,
+        0,
+        'foo.js',
+        (global, require, importDefault, importAll, module) => {
+          require(null);
+        },
+      );
+
+      expect(() => moduleSystem.__r(0)).toThrow('Cannot find module');
+    });
+
+    test('throws "module not found" with name when trying to require an unresolvable optional dependency', () => {
+      createModuleSystem(moduleSystem, true, '');
+
+      createModule(
+        moduleSystem,
+        0,
+        'foo.js',
+        (global, require, importDefault, importAll, module) => {
+          require(null, './not-exists');
+        },
+      );
+
+      expect(() => moduleSystem.__r(0)).toThrow(
+        "Cannot find module './not-exists'",
       );
     });
 

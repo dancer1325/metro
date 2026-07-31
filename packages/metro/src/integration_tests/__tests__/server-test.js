@@ -12,10 +12,9 @@
 
 const Metro = require('../../..');
 const execBundle = require('../execBundle');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
-jest.unmock('cosmiconfig');
 jest.useRealTimers();
 jest.setTimeout(60 * 1000);
 
@@ -31,7 +30,7 @@ describe('Metro development server serves bundles via HTTP', () => {
   const bundlesDownloaded = new Set();
   let serverClosedPromise;
 
-  async function downloadAndExec(pathname: string, context = {}): mixed {
+  async function downloadAndExec(pathname: string, context = {}): unknown {
     const response = await fetchAndClose(
       'http://localhost:' + httpServer.address().port + pathname,
     );
@@ -60,12 +59,12 @@ describe('Metro development server serves bundles via HTTP', () => {
 
     let onCloseResolve;
     serverClosedPromise = new Promise(resolve => (onCloseResolve = resolve));
-    httpServer = await Metro.runServer(config, {
+    ({httpServer} = await Metro.runServer(config, {
       reporter: {update() {}},
       onClose: () => {
         onCloseResolve();
       },
-    });
+    }));
   });
 
   afterEach(async () => {

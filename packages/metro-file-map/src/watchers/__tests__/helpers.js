@@ -15,11 +15,11 @@ import type {WatcherOptions} from '../common';
 import FallbackWatcher from '../FallbackWatcher';
 import NativeWatcher from '../NativeWatcher';
 import WatchmanWatcher from '../WatchmanWatcher';
-import {execSync} from 'child_process';
-import {promises as fsPromises} from 'fs';
 import invariant from 'invariant';
-import os from 'os';
-import {join} from 'path';
+import {execSync} from 'node:child_process';
+import {promises as fsPromises} from 'node:fs';
+import os from 'node:os';
+import {join} from 'node:path';
 
 jest.useRealTimers();
 
@@ -41,8 +41,8 @@ const isWatchmanOnPath = () => {
 };
 
 // `null` Watchers will be marked as skipped tests.
-export const WATCHERS: $ReadOnly<{
-  [key: string]:
+export const WATCHERS: Readonly<{
+  [key: 'Watchman' | 'Native' | 'Fallback']:
     | Class<FallbackWatcher>
     | Class<NativeWatcher>
     | Class<WatchmanWatcher>
@@ -53,6 +53,8 @@ export const WATCHERS: $ReadOnly<{
   Fallback: FallbackWatcher,
 };
 
+export type WatcherName = keyof typeof WATCHERS;
+
 export type EventHelpers = {
   nextEvent: (afterFn: () => Promise<void>) => Promise<{
     eventType: string,
@@ -62,18 +64,18 @@ export type EventHelpers = {
   untilEvent: (
     afterFn: () => Promise<void>,
     expectedPath: string,
-    expectedEvent: 'touch' | 'delete',
+    expectedEvent: 'touch' | 'delete' | 'recrawl',
   ) => Promise<void>,
   allEvents: (
     afterFn: () => Promise<void>,
-    events: $ReadOnlyArray<[string, 'touch' | 'delete']>,
+    events: ReadonlyArray<[string, 'touch' | 'delete' | 'recrawl']>,
     opts?: {rejectUnexpected: boolean},
   ) => Promise<void>,
 };
 
 export const createTempWatchRoot = async (
-  watcherName: string,
-  watchmanConfig: {[key: string]: mixed} | false = {},
+  watcherName: WatcherName,
+  watchmanConfig: {[key: string]: unknown} | false = {},
 ): Promise<string> => {
   const tmpDir = await mkdtemp(
     join(os.tmpdir(), `metro-watcher-${watcherName}-test-`),
@@ -94,7 +96,7 @@ export const createTempWatchRoot = async (
 };
 
 export const startWatching = async (
-  watcherName: string,
+  watcherName: WatcherName,
   watchRoot: string,
   opts: WatcherOptions,
 ): (Promise<{
@@ -149,8 +151,7 @@ export const startWatching = async (
     allEvents: (afterFn, expectedEvents, {rejectUnexpected = true} = {}) =>
       Promise.all([
         new Promise((resolve, reject) => {
-          const tupleToKey = (tuple: $ReadOnlyArray<string>) =>
-            tuple.join('\0');
+          const tupleToKey = (tuple: ReadonlyArray<string>) => tuple.join('\0');
           const allEventKeys = new Set(
             expectedEvents.map(tuple => tupleToKey(tuple)),
           );

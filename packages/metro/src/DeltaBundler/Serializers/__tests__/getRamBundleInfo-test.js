@@ -9,18 +9,15 @@
  * @oncall react_native
  */
 
-'use strict';
-
-import type {Module, TransformInputOptions} from '../../types.flow';
+import type {Module, TransformInputOptions} from '../../types';
 import type {JsOutput} from 'metro-transform-worker';
 
 import CountingSet from '../../../lib/CountingSet';
-
-const getRamBundleInfo = require('../getRamBundleInfo');
+import getRamBundleInfo from '../getRamBundleInfo';
 
 function createModule(
   name: string,
-  dependencies: $ReadOnlyArray<string>,
+  dependencies: ReadonlyArray<string>,
   type: JsOutput['type'] = 'js/module',
 ): [string, Module<>] {
   return [
@@ -32,7 +29,10 @@ function createModule(
           dep,
           {
             absolutePath: `/root/${dep}.js`,
-            data: {data: {asyncType: null, locs: [], key: dep}, name: dep},
+            data: {
+              data: {asyncType: null, isESMImport: false, locs: [], key: dep},
+              name: dep,
+            },
           },
         ]),
       ),
@@ -52,7 +52,6 @@ function createModule(
 const transformOptions: TransformInputOptions = {
   customTransformOptions: {},
   dev: true,
-  hot: true,
   minify: true,
   platform: 'web',
   type: 'module',
@@ -85,7 +84,7 @@ test('should return the RAM bundle info', async () => {
       {...graph, entryPoints: new Set(['/root/entry.js'])},
       {
         asyncRequireModulePath: '',
-        // $FlowFixMe[incompatible-call] createModuleId assumes numeric IDs - is this too strict?
+        // $FlowFixMe[incompatible-type] createModuleId assumes numeric IDs - is this too strict?
         createModuleId: path => path,
         dev: true,
         excludeSource: false,
@@ -94,6 +93,7 @@ test('should return the RAM bundle info', async () => {
           preloadedModules: {},
           ramGroups: [],
         }),
+        globalPrefix: '',
         includeAsyncPaths: false,
         inlineSourceMap: false,
         modulesOnly: false,
@@ -120,7 +120,7 @@ test('emits x_google_ignoreList based on shouldAddToIgnoreList', async () => {
       {...graph, entryPoints: new Set(['/root/entry.js'])},
       {
         asyncRequireModulePath: '',
-        // $FlowFixMe[incompatible-call] createModuleId assumes numeric IDs - is this too strict?
+        // $FlowFixMe[incompatible-type] createModuleId assumes numeric IDs - is this too strict?
         createModuleId: path => path,
         dev: true,
         excludeSource: false,
@@ -129,6 +129,7 @@ test('emits x_google_ignoreList based on shouldAddToIgnoreList', async () => {
           preloadedModules: {},
           ramGroups: [],
         }),
+        globalPrefix: '',
         includeAsyncPaths: false,
         inlineSourceMap: false,
         modulesOnly: false,
@@ -159,12 +160,15 @@ test('should use the preloadedModules and ramGroup configs to build a RAM bundle
     {...graph, entryPoints: new Set(['/root/entry.js'])},
     {
       asyncRequireModulePath: '',
-      // $FlowFixMe[incompatible-call] createModuleId assumes numeric IDs - is this too strict?
+      // $FlowFixMe[incompatible-type] createModuleId assumes numeric IDs - is this too strict?
       createModuleId: path => path,
       dev: true,
       excludeSource: false,
       getRunModuleStatement,
+      /* $FlowFixMe[incompatible-type] Natural Inference rollout. See
+       * https://fburl.com/workplace/6291gfvu */
       getTransformOptions,
+      globalPrefix: '',
       includeAsyncPaths: false,
       inlineSourceMap: null,
       modulesOnly: false,

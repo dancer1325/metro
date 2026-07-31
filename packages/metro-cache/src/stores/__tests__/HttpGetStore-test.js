@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 'use strict';
 
-const {PassThrough} = require('stream');
-const zlib = require('zlib');
+const {PassThrough} = require('node:stream');
+const zlib = require('node:zlib');
 
 jest.useRealTimers();
 
@@ -30,12 +37,12 @@ describe('HttpGetStore', () => {
   }
 
   beforeEach(() => {
-    jest.resetModules().resetAllMocks().mock('http');
+    jest.resetModules().resetAllMocks().mock('node:http');
 
     httpPassThrough = new PassThrough();
-    require('http').request.mockReturnValue(httpPassThrough);
+    jest.requireMock('node:http').request.mockReturnValue(httpPassThrough);
 
-    HttpGetStore = require('../HttpGetStore');
+    HttpGetStore = require('../HttpGetStore').default;
 
     warningMessages = [];
 
@@ -49,7 +56,7 @@ describe('HttpGetStore', () => {
       endpoint: 'http://www.example.com/endpoint',
     });
     const promise = store.get(Buffer.from('key'));
-    const [opts, callback] = require('http').request.mock.calls[0];
+    const [opts, callback] = jest.requireMock('node:http').request.mock.calls[0];
 
     expect(opts.method).toEqual('GET');
     expect(opts.host).toEqual('www.example.com');
@@ -65,7 +72,7 @@ describe('HttpGetStore', () => {
   test("doesn't throw any error and doesn't warn on http status 404 errors", async () => {
     const store = new HttpGetStore({endpoint: 'http://example.com'});
     const promise = store.get(Buffer.from('key'));
-    const [opts, callback] = require('http').request.mock.calls[0];
+    const [opts, callback] = jest.requireMock('node:http').request.mock.calls[0];
 
     expect(opts.method).toEqual('GET');
 
@@ -81,7 +88,7 @@ describe('HttpGetStore', () => {
   test("doesn't throw any error and warns on http status 502 errors", async () => {
     const store = new HttpGetStore({endpoint: 'http://example.com'});
     const promise = store.get(Buffer.from('key'));
-    const [opts, callback] = require('http').request.mock.calls[0];
+    const [opts, callback] = jest.requireMock('node:http').request.mock.calls[0];
 
     expect(opts.method).toEqual('GET');
 

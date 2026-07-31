@@ -9,15 +9,15 @@
  * @oncall react_native
  */
 
-'use strict';
 import type {BasicSourceMap, IndexMap, MixedSourceMap} from '../source-map';
 
-const composeSourceMaps = require('../composeSourceMaps');
-const Consumer = require('../Consumer');
-const fs = require('fs');
+import composeSourceMaps from '../composeSourceMaps';
+import Consumer from '../Consumer';
+import {add0, add1} from 'ob1';
+
 const invariant = require('invariant');
-const {add0, add1} = require('ob1');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const terser = require('terser');
 
 const {objectContaining} = expect;
@@ -137,7 +137,7 @@ describe('composeSourceMaps', () => {
   });
 
   test('preserves x_facebook_sources', () => {
-    const map1 = {
+    const map1: MixedSourceMap = {
       version: 3,
       sections: [
         {
@@ -153,7 +153,7 @@ describe('composeSourceMaps', () => {
       ],
     };
 
-    const map2 = {
+    const map2: MixedSourceMap = {
       version: 3,
       sources: ['src-transformed.js'],
       names: ['gLoBAl'],
@@ -168,7 +168,7 @@ describe('composeSourceMaps', () => {
   });
 
   test('preserves and reindexes x_google_ignoreList', () => {
-    const map1 = {
+    const map1: MixedSourceMap = {
       version: 3,
       sections: [
         {
@@ -184,7 +184,7 @@ describe('composeSourceMaps', () => {
       ],
     };
 
-    const map2 = {
+    const map2: MixedSourceMap = {
       version: 3,
       sources: ['src-transformed.js'],
       names: ['gLoBAl'],
@@ -202,7 +202,7 @@ describe('composeSourceMaps', () => {
   });
 
   test('x_google_ignoreList: a source with inconsistent ignore status is considered to be ignored', () => {
-    const map1 = {
+    const map1: MixedSourceMap = {
       version: 3,
       sections: [
         {
@@ -221,7 +221,7 @@ describe('composeSourceMaps', () => {
           map: {
             version: 3,
             sources: ['src.js', 'other.js'],
-            x_google_ignoreList: ([]: Array<number>),
+            x_google_ignoreList: [] as Array<number>,
             names: ['global'],
 
             mappings:
@@ -234,7 +234,7 @@ describe('composeSourceMaps', () => {
       ],
     };
 
-    const map2 = {
+    const map2: MixedSourceMap = {
       version: 3,
       sources: ['src-transformed.js'],
       names: ['gLoBAl'],
@@ -242,6 +242,8 @@ describe('composeSourceMaps', () => {
       mappings: 'AAAAA;AACAA;AACAA',
     };
 
+    /* $FlowFixMe[incompatible-call] Natural Inference rollout. See
+     * https://fburl.com/gdoc/y8dn025u */
     const mergedMap = composeSourceMaps([map1, map2]);
 
     expect(mergedMap).toEqual(
@@ -253,7 +255,7 @@ describe('composeSourceMaps', () => {
   });
 
   test('preserves sourcesContent', () => {
-    const map1 = {
+    const map1: MixedSourceMap = {
       version: 3,
       sections: [
         {
@@ -262,7 +264,7 @@ describe('composeSourceMaps', () => {
             version: 3,
             sources: ['1.js', '2.js'],
             sourcesContent: ['content of 1.js', 'content of 2.js'],
-            names: ([]: Array<string>),
+            names: [] as Array<string>,
             // One column from 2.js, one column from 1.js
             mappings: 'ACAA,CDAA',
           },
@@ -270,10 +272,10 @@ describe('composeSourceMaps', () => {
       ],
     };
 
-    const map2 = {
+    const map2: MixedSourceMap = {
       version: 3,
       sources: ['transformed.js'],
-      names: ([]: Array<string>),
+      names: [] as Array<string>,
       // Two consecutive columns from transformed.js
       mappings: 'AAAA,CAAC',
     };
@@ -354,6 +356,8 @@ describe('composeSourceMaps', () => {
       x_hermes_function_offsets: {[0]: [20, 25, 36], [1]: [47, 220, 300]},
     };
 
+    /* $FlowFixMe[incompatible-type] Natural Inference rollout. See
+     * https://fburl.com/gdoc/y8dn025u */
     const mergedMap = composeSourceMaps([map1, map2]);
     expect(mergedMap.x_hermes_function_offsets).toEqual({
       [0]: [20, 25, 36],

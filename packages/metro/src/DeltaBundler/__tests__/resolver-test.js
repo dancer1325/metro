@@ -11,9 +11,9 @@
 
 'use strict';
 
-import type {ResolverInputOptions} from '../../shared/types.flow';
-import type {TransformResultDependency} from '../types.flow';
-import type {InputConfigT} from 'metro-config/src/configTypes.flow';
+import type {ResolverInputOptions} from '../../shared/types';
+import type {TransformResultDependency} from '../types';
+import type {InputConfigT} from 'metro-config';
 
 const {getDefaultConfig, mergeConfig} = require('metro-config');
 const {AmbiguousModuleResolutionError} = require('metro-core');
@@ -21,22 +21,26 @@ const {
   DuplicateHasteCandidatesError,
   default: {H: Haste},
 } = require('metro-file-map');
-const path = require('path');
+const path = require('node:path');
+
 const mockPlatform = process.platform;
 
 jest.useRealTimers();
 jest
   // It's noticeably faster to prevent running watchman from FileWatcher.
-  .mock('child_process', () => ({}))
-  .mock('os', () => ({
-    ...jest.requireActual('os'),
+  .mock('node:child_process', () => ({}))
+  .mock('node:os', () => ({
+    ...jest.requireActual('node:os'),
     platform: () => 'test',
     tmpdir: () => (mockPlatform === 'win32' ? 'C:\\tmp' : '/tmp'),
     hostname: () => 'testhost',
     endianness: () => 'LE',
     release: () => '',
   }))
-  .mock('graceful-fs', () => require('fs'))
+  .mock('graceful-fs', () => jest.requireMock('node:fs'))
+  // The third-party `walker` (used by metro-file-map's FallbackWatcher) requires
+  // the unprefixed 'fs', so alias it to the same in-memory fs as 'node:fs'.
+  .mock('fs', () => jest.requireMock('node:fs'))
   .spyOn(console, 'warn')
   .mockImplementation(() => {});
 
@@ -45,7 +49,7 @@ jest.setTimeout(10000);
 let fs;
 let resolver;
 
-type MockFSDirContents = $ReadOnly<{
+type MockFSDirContents = Readonly<{
   [name: string]: string | MockFSDirContents,
 }>;
 
@@ -54,6 +58,7 @@ function dep(name: string): TransformResultDependency {
     name,
     data: {
       asyncType: null,
+      isESMImport: false,
       key: name,
       locs: [],
     },
@@ -77,13 +82,13 @@ function dep(name: string): TransformResultDependency {
     for (const entName in desc) {
       const ent = desc[entName];
 
-      const entPath = require('path').join(dirPath, entName);
+      const entPath = jest.requireMock('node:path').join(dirPath, entName);
       if (typeof ent === 'string') {
         fs.writeFileSync(entPath, ent);
         continue;
       }
       if (typeof ent !== 'object') {
-        throw new Error(require('util').format('invalid entity:', ent));
+        throw new Error(require('node:util').format('invalid entity:', ent));
       }
       fs.mkdirSync(entPath);
       mockDir(entPath, ent);
@@ -113,7 +118,7 @@ function dep(name: string): TransformResultDependency {
   };
 
   async function createResolver(config: InputConfigT = {}, platform?: string) {
-    const DependencyGraph = require('../../node-haste/DependencyGraph');
+    const DependencyGraph = require('../../node-haste/DependencyGraph').default;
     const dependencyGraph = new DependencyGraph(
       mergeConfig(await getDefaultConfig(p('/root')), defaultConfig, config),
     );
@@ -159,23 +164,21 @@ function dep(name: string): TransformResultDependency {
       });
 
       if (osPlatform === 'win32') {
+        const mockPath = jest.requireActual<{win32: unknown}>('path');
+        jest.mock('node:path', () => mockPath.win32);
         jest.mock(
-          'path',
-          () => jest.requireActual<{win32: mixed}>('path').win32,
-        );
-        jest.mock(
-          'fs',
+          'node:fs',
           () => new (require('metro-memory-fs'))({platform: 'win32'}),
         );
       } else {
-        jest.mock('path', () => jest.requireActual('path'));
-        jest.mock('fs', () => new (require('metro-memory-fs'))());
+        jest.mock('node:path', () => jest.requireActual('node:path'));
+        jest.mock('node:fs', () => new (require('metro-memory-fs'))());
       }
 
       // $FlowFixMe[cannot-write]
-      require('os').tmpdir = () => p('/tmp');
+      jest.requireMock('node:os').tmpdir = () => p('/tmp');
 
-      fs = require('fs');
+      fs = jest.requireMock('node:fs');
       originalError = console.error;
       // $FlowFixMe[cannot-write]
       console.error = jest.fn((...args) => {
@@ -859,7 +862,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: 'client.js',
+                    [browserField as string]: 'client.js',
                   }),
                   'client.js': '',
                 },
@@ -884,7 +887,7 @@ function dep(name: string): TransformResultDependency {
                     name: 'aPackage',
                     main: 'another.js',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: 'client.js',
+                    [browserField as string]: 'client.js',
                   }),
                   'client.js': '',
                 },
@@ -908,7 +911,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: 'client',
+                    [browserField as string]: 'client',
                   }),
                   'client.js': '',
                 },
@@ -933,7 +936,7 @@ function dep(name: string): TransformResultDependency {
                     name: 'aPackage',
                     main: 'main.js',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {'main.js': 'client.js'},
+                    [browserField as string]: {'main.js': 'client.js'},
                   }),
                   'client.js': '',
                   'main.js': '',
@@ -966,7 +969,7 @@ function dep(name: string): TransformResultDependency {
                     name: 'aPackage',
                     main: 'main.js',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {'./main': './client'},
+                    [browserField as string]: {'./main': './client'},
                   }),
                   'client.js': '',
                   'main.js': '',
@@ -998,7 +1001,7 @@ function dep(name: string): TransformResultDependency {
                     name: 'aPackage',
                     main: 'main.js',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {
+                    [browserField as string]: {
                       './main.js': 'main-client.js',
                       'foo.js': 'foo-client.js',
                       './dir/file.js': 'dir/file-client.js',
@@ -1080,7 +1083,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {
+                    [browserField as string]: {
                       'left-pad': 'left-pad-browser',
                     },
                   }),
@@ -1092,7 +1095,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'left-pad-browser',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {'./main.js': 'main-client'},
+                    [browserField as string]: {'./main.js': 'main-client'},
                   }),
                   'index.js': '',
                   'main-client.js': '',
@@ -1127,7 +1130,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {
+                    [browserField as string]: {
                       'left-pad': './left-pad-browser',
                     },
                   }),
@@ -1159,7 +1162,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {
+                    [browserField as string]: {
                       'left-pad': false,
                     },
                   }),
@@ -1210,7 +1213,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {
+                    [browserField as string]: {
                       './foo.js': false,
                     },
                   }),
@@ -1959,7 +1962,7 @@ function dep(name: string): TransformResultDependency {
                   'package.json': JSON.stringify({
                     name: 'aPackage',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: 'client.js',
+                    [browserField as string]: 'client.js',
                   }),
                   'client.js': '',
                 },
@@ -1982,7 +1985,7 @@ function dep(name: string): TransformResultDependency {
                     name: 'aPackage',
                     main: 'main.js',
                     // $FlowFixMe[invalid-computed-prop]
-                    [(browserField: string)]: {'./main': './client'},
+                    [browserField as string]: {'./main': './client'},
                   }),
                   'client.js': '',
                   'main.js': '',

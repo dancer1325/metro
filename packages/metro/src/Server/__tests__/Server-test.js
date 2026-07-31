@@ -16,18 +16,21 @@ import type {
   Options,
   ReadOnlyGraph,
   TransformResultDependency,
-} from '../../DeltaBundler/types.flow';
+} from '../../DeltaBundler/types';
+import type {InputConfigT} from 'metro-config';
 
+import ResourceNotFoundError from '../../IncrementalBundler/ResourceNotFoundError';
 import CountingSet from '../../lib/CountingSet';
-import {mergeConfig} from 'metro-config/src';
+import {mergeConfig} from 'metro-config';
 // $FlowFixMe[untyped-import]
 import MockRequest from 'mock-req';
 // $FlowFixMe[untyped-import]
 import MockResponse from 'mock-res';
 
-const ResourceNotFoundError = require('../../IncrementalBundler/ResourceNotFoundError');
-const {getDefaultValues} = require('metro-config/src/defaults');
-const path = require('path');
+const {
+  getDefaultConfig: {getDefaultValues},
+} = require('metro-config');
+const path = require('node:path');
 
 jest
   .mock('jest-worker', () => ({}))
@@ -75,8 +78,8 @@ describe('processRequest', () => {
     getAsset = jest.fn();
 
     let i = 0;
-    jest.doMock('crypto', () => ({
-      ...jest.requireActual('crypto'),
+    jest.doMock('node:crypto', () => ({
+      ...jest.requireActual('node:crypto'),
       randomBytes: jest.fn().mockImplementation(() => `XXXXX-${i++}`),
     }));
 
@@ -94,21 +97,24 @@ describe('processRequest', () => {
       getResolveDependencyFn,
     }));
 
-    Bundler = require('../../Bundler');
+    const mockFs = new (require('metro-memory-fs'))();
+    jest.doMock('fs', () => mockFs);
+    jest.doMock('node:fs', () => mockFs);
+
+    Bundler = require('../../Bundler').default;
     jest
       .spyOn(Bundler.prototype, 'getDependencyGraph')
       .mockImplementation(getDependencyGraph);
 
-    jest.mock('fs', () => new (require('metro-memory-fs'))());
-    fs = require('fs');
+    fs = mockFs;
 
-    DeltaBundler = require('../../DeltaBundler');
+    DeltaBundler = require('../../DeltaBundler').default;
     jest
       .spyOn(DeltaBundler.prototype, 'buildGraph')
       .mockImplementation(buildGraph);
     jest.spyOn(DeltaBundler.prototype, 'getDelta').mockImplementation(getDelta);
 
-    Server = require('../../Server');
+    Server = require('../../Server').default;
   });
 
   afterEach(() => {
@@ -158,31 +164,29 @@ describe('processRequest', () => {
         });
       },
     },
-  });
+  } as InputConfigT);
 
   const makeRequest = (
     requrl: string,
-    options?: ?$ReadOnly<{
+    options?: ?Readonly<{
       method?: string,
-      headers?: $ReadOnly<{[string]: string}>,
-      rawBody?: string,
+      headers?: Readonly<{[string]: string}>,
+      data?: string,
     }>,
   ) =>
     new Promise<$FlowFixMe>((resolve, reject) => {
-      const {rawBody, method, ...reqOptions} = options ?? {};
-      const actualMethod = method ?? (rawBody != null ? 'POST' : 'GET');
+      const {data, method, headers, ...reqOptions} = options ?? {};
+      const actualMethod = method ?? (data != null ? 'POST' : 'GET');
       const req = new MockRequest({
         url: requrl,
         method: actualMethod,
-        headers: {host: 'localhost:8081'},
+        headers: {...headers, host: 'localhost:8081'},
         ...reqOptions,
       });
-      if (rawBody != null) {
-        req.write(rawBody);
+      req.socket = {};
+      if (data != null) {
+        req.write(data);
         req.end();
-
-        // We implicitly depend on a body parser within `connect` that sets this
-        req.rawBody = rawBody;
       }
       const res: $FlowFixMe = new MockResponse(() => {
         resolve(res);
@@ -195,10 +199,10 @@ describe('processRequest', () => {
     const currentGraphs = new Set<ReadOnlyGraph<>>();
     buildGraph.mockImplementation(
       async (
-        entryPoints: $ReadOnlyArray<string>,
+        entryPoints: ReadonlyArray<string>,
         options: Options<>,
-        resolverOptions: mixed,
-        otherOptions: mixed,
+        resolverOptions: unknown,
+        otherOptions: unknown,
       ) => {
         dependencies = new Map<string, Module<>>([
           [
@@ -211,7 +215,12 @@ describe('processRequest', () => {
                   {
                     absolutePath: '/root/foo.js',
                     data: {
-                      data: {asyncType: null, key: 'foo', locs: []},
+                      data: {
+                        asyncType: null,
+                        isESMImport: false,
+                        key: 'foo',
+                        locs: [],
+                      },
                       name: 'foo',
                     },
                   },
@@ -305,6 +314,7 @@ describe('processRequest', () => {
         getHasteMap: jest.fn().mockReturnValue({on: jest.fn()}),
         load: jest.fn(() => Promise.resolve()),
         getWatcher: jest.fn(() => ({})),
+        doesFileExist: jest.fn().mockReturnValue(true),
       }),
     );
 
@@ -319,7 +329,9 @@ describe('processRequest', () => {
     );
 
     // $FlowFixMe[cannot-write]
-    fs.realpath = jest.fn((file, cb) => cb?.(null, '/root/foo.js'));
+    fs.realpath = jest.fn((file, cb) => {
+      cb?.(null, '/root/foo.js');
+    });
   });
 
   test.each(['?', '//&'])(
@@ -336,7 +348,7 @@ describe('processRequest', () => {
           '__d(function() {entry();},0,[1],"mybundle.js");',
           '__d(function() {foo();},1,[],"foo.js");',
           'require(0);',
-          '//# sourceMappingURL=//localhost:8081/mybundle.map?runModule=true',
+          '//# sourceMappingURL=http://localhost:8081/mybundle.map?runModule=true',
           '//# sourceURL=http://localhost:8081/mybundle.bundle//&runModule=true',
         ].join('\n'),
       );
@@ -351,7 +363,7 @@ describe('processRequest', () => {
         'function () {require();}',
         '__d(function() {entry();},0,[1],"mybundle.js");',
         '__d(function() {foo();},1,[],"foo.js");',
-        '//# sourceMappingURL=//localhost:8081/mybundle.map?runModule=false',
+        '//# sourceMappingURL=http://localhost:8081/mybundle.map?runModule=false',
         '//# sourceURL=http://localhost:8081/mybundle.bundle//&runModule=false',
       ].join('\n'),
     );
@@ -461,8 +473,29 @@ describe('processRequest', () => {
       [
         '__d(function() {entry();},0,[1],"mybundle.js");',
         '__d(function() {foo();},1,[],"foo.js");',
-        '//# sourceMappingURL=//localhost:8081/mybundle.map?modulesOnly=true&runModule=false',
+        '//# sourceMappingURL=http://localhost:8081/mybundle.map?modulesOnly=true&runModule=false',
         '//# sourceURL=http://localhost:8081/mybundle.bundle//&modulesOnly=true&runModule=false',
+      ].join('\n'),
+    );
+  });
+
+  test('support "x-forwarded-host" and "x-forwarded-proto" proxy headers for bundles', async () => {
+    const response = await makeRequest(
+      'mybundle.bundle?modulesOnly=true&runModule=false&platform=vr',
+      {
+        headers: {
+          'x-forwarded-host': 'forwardedhost.com',
+          'x-forwarded-proto': 'https',
+        },
+      },
+    );
+
+    expect(response._getString()).toEqual(
+      [
+        '__d(function() {entry();},0,[1],"mybundle.js");',
+        '__d(function() {foo();},1,[],"foo.js");',
+        '//# sourceMappingURL=https://forwardedhost.com/mybundle.map?modulesOnly=true&runModule=false&platform=vr',
+        '//# sourceURL=https://forwardedhost.com/mybundle.bundle//&modulesOnly=true&runModule=false&platform=vr',
       ].join('\n'),
     );
   });
@@ -476,14 +509,14 @@ describe('processRequest', () => {
     expect(response._getString()).toEqual(
       [
         '__d(function() {entry();},0,[1],"mybundle.js");',
-        '//# sourceMappingURL=//localhost:8081/mybundle.map?shallow=true&modulesOnly=true&runModule=false',
+        '//# sourceMappingURL=http://localhost:8081/mybundle.map?shallow=true&modulesOnly=true&runModule=false',
         '//# sourceURL=http://localhost:8081/mybundle.bundle//&shallow=true&modulesOnly=true&runModule=false',
       ].join('\n'),
     );
   });
 
   test('should handle DELETE requests on *.bundle', async () => {
-    const IncrementalBundler = require('../../IncrementalBundler');
+    const IncrementalBundler = require('../../IncrementalBundler').default;
     const updateSpy = jest.spyOn(IncrementalBundler.prototype, 'updateGraph');
     const initSpy = jest.spyOn(IncrementalBundler.prototype, 'initializeGraph');
 
@@ -541,7 +574,7 @@ describe('processRequest', () => {
   });
 
   test('DELETE handles errors', async () => {
-    const IncrementalBundler = require('../../IncrementalBundler');
+    const IncrementalBundler = require('../../IncrementalBundler').default;
     jest
       .spyOn(IncrementalBundler.prototype, 'endGraph')
       .mockImplementationOnce(async () => {
@@ -566,21 +599,40 @@ describe('processRequest', () => {
 
     expect(response._getJSON()).toEqual({
       version: 3,
-      sources: ['require-js', '/root/mybundle.js', '/root/foo.js'],
-      sourcesContent: ['code-require', 'code-mybundle', 'code-foo'],
-      names: [],
-      mappings: ';gBCAA;gBCAA',
-      x_facebook_sources: [
-        null,
-        null,
-        [
-          {
-            mappings: 'AAA',
-            names: ['<global>'],
+      sections: [
+        {
+          offset: {line: 0, column: 0},
+          map: {
+            version: 3,
+            sources: ['require-js'],
+            sourcesContent: ['code-require'],
+            names: [],
+            mappings: '',
           },
-        ],
+        },
+        {
+          offset: {line: 1, column: 0},
+          map: {
+            version: 3,
+            sources: ['/root/mybundle.js'],
+            sourcesContent: ['code-mybundle'],
+            names: [],
+            mappings: 'gBAAA',
+          },
+        },
+        {
+          offset: {line: 2, column: 0},
+          map: {
+            version: 3,
+            sources: ['/root/foo.js'],
+            sourcesContent: ['code-foo'],
+            names: [],
+            mappings: 'gBAAA',
+            x_facebook_sources: [[{mappings: 'AAA', names: ['<global>']}]],
+            x_google_ignoreList: [0],
+          },
+        },
       ],
-      x_google_ignoreList: [2],
     });
   });
 
@@ -589,20 +641,30 @@ describe('processRequest', () => {
 
     expect(response._getJSON()).toEqual({
       version: 3,
-      sources: ['/root/mybundle.js', '/root/foo.js'],
-      sourcesContent: ['code-mybundle', 'code-foo'],
-      names: [],
-      mappings: 'gBAAA;gBCAA',
-      x_facebook_sources: [
-        null,
-        [
-          {
-            mappings: 'AAA',
-            names: ['<global>'],
+      sections: [
+        {
+          offset: {line: 0, column: 0},
+          map: {
+            version: 3,
+            sources: ['/root/mybundle.js'],
+            sourcesContent: ['code-mybundle'],
+            names: [],
+            mappings: 'gBAAA',
           },
-        ],
+        },
+        {
+          offset: {line: 1, column: 0},
+          map: {
+            version: 3,
+            sources: ['/root/foo.js'],
+            sourcesContent: ['code-foo'],
+            names: [],
+            mappings: 'gBAAA',
+            x_facebook_sources: [[{mappings: 'AAA', names: ['<global>']}]],
+            x_google_ignoreList: [0],
+          },
+        },
       ],
-      x_google_ignoreList: [1],
     });
   });
 
@@ -674,14 +736,14 @@ describe('processRequest', () => {
       transformOptions: {
         customTransformOptions: {},
         dev: true,
-        hot: true,
         minify: false,
         platform: 'ios',
         type: 'module',
         unstable_transformProfile: 'default',
       },
       unstable_allowRequireContext: false,
-      unstable_enablePackageExports: false,
+      unstable_enablePackageExports: true,
+      unstable_incrementalResolution: false,
     });
   });
 
@@ -690,25 +752,40 @@ describe('processRequest', () => {
 
     expect(response._getJSON()).toEqual({
       version: 3,
-      sources: [
-        '/require-js',
-        '/[metro-project]/mybundle.js',
-        '/[metro-project]/foo.js',
-      ],
-      sourcesContent: ['code-require', 'code-mybundle', 'code-foo'],
-      names: [],
-      mappings: ';gBCAA;gBCAA',
-      x_facebook_sources: [
-        null,
-        null,
-        [
-          {
-            mappings: 'AAA',
-            names: ['<global>'],
+      sections: [
+        {
+          offset: {line: 0, column: 0},
+          map: {
+            version: 3,
+            sources: ['/require-js'],
+            sourcesContent: ['code-require'],
+            names: [],
+            mappings: '',
           },
-        ],
+        },
+        {
+          offset: {line: 1, column: 0},
+          map: {
+            version: 3,
+            sources: ['/[metro-project]/mybundle.js'],
+            sourcesContent: ['code-mybundle'],
+            names: [],
+            mappings: 'gBAAA',
+          },
+        },
+        {
+          offset: {line: 2, column: 0},
+          map: {
+            version: 3,
+            sources: ['/[metro-project]/foo.js'],
+            sourcesContent: ['code-foo'],
+            names: [],
+            mappings: 'gBAAA',
+            x_facebook_sources: [[{mappings: 'AAA', names: ['<global>']}]],
+            x_google_ignoreList: [0],
+          },
+        },
       ],
-      x_google_ignoreList: [2],
     });
   });
 
@@ -736,14 +813,14 @@ describe('processRequest', () => {
       transformOptions: {
         customTransformOptions: {},
         dev: true,
-        hot: true,
         minify: false,
         platform: null,
         type: 'module',
         unstable_transformProfile: 'hermes-stable',
       },
       unstable_allowRequireContext: false,
-      unstable_enablePackageExports: false,
+      unstable_enablePackageExports: true,
+      unstable_incrementalResolution: false,
     });
   });
 
@@ -767,7 +844,7 @@ describe('processRequest', () => {
           '__d(function() {entry();},0,[1],"mybundle.js");',
           '__d(function() {foo();},1,[],"foo.js");',
           'require(0);',
-          '//# sourceMappingURL=//localhost:8081/mybundle.map?runModule=true&TEST_URL_WAS_REWRITTEN=true',
+          '//# sourceMappingURL=http://localhost:8081/mybundle.map?runModule=true&TEST_URL_WAS_REWRITTEN=true',
           '//# sourceURL=http://localhost:8081/mybundle.bundle//&runModule=true&TEST_URL_WAS_REWRITTEN=true',
         ].join('\n'),
       );
@@ -812,6 +889,7 @@ describe('processRequest', () => {
         ['/root'],
         'ios',
         expect.any(Array),
+        expect.any(Function),
       );
     });
 
@@ -829,6 +907,7 @@ describe('processRequest', () => {
         ['/root'],
         'ios',
         expect.any(Array),
+        expect.any(Function),
       );
       expect(response._getString()).toBe(mockData.slice(0, 4));
     });
@@ -875,16 +954,17 @@ describe('processRequest', () => {
       getAsset.mockResolvedValue('i am image');
 
       const response = await makeRequest(
-        '/assets/imgs/%E4%B8%BB%E9%A1%B5/logo.png',
+        '/assets/imgs/%2530/%D0%B0%D0%B9%D1%81%D0%B5%D1%82/%C3%98%E0%B2%9A%F0%9F%98%81/%E4%B8%BB%E9%A1%B5/logo.png',
       );
       expect(response._getString()).toBe('i am image');
 
       expect(getAsset).toBeCalledWith(
-        'imgs/\u{4E3B}\u{9875}/logo.png',
+        'imgs/%30/айсет/Øಚ😁/主页/logo.png',
         '/root',
         ['/root'],
-        undefined,
+        null,
         expect.any(Array),
+        expect.any(Function),
       );
     });
 
@@ -909,6 +989,7 @@ describe('processRequest', () => {
         ['/root'],
         'ios',
         expect.any(Array),
+        expect.any(Function),
       );
       expect(response._getString()).toBe('i am image');
     });
@@ -924,8 +1005,9 @@ describe('processRequest', () => {
         '../otherFolder/otherImage.png',
         '/root',
         ['/root'],
-        undefined,
+        null,
         expect.any(Array),
+        expect.any(Function),
       );
       expect(response._getString()).toBe('i am image');
     });
@@ -936,7 +1018,6 @@ describe('processRequest', () => {
       await server.build({
         ...Server.DEFAULT_BUNDLE_OPTIONS,
         entryFile: 'foo file',
-        bundleType: 'bundle',
         platform: undefined,
       });
 
@@ -948,7 +1029,6 @@ describe('processRequest', () => {
         {
           customTransformOptions: {},
           dev: true,
-          hot: false,
           minify: false,
           platform: undefined,
           type: 'module',
@@ -967,14 +1047,14 @@ describe('processRequest', () => {
         transformOptions: {
           customTransformOptions: {},
           dev: true,
-          hot: false,
           minify: false,
           platform: undefined,
           type: 'module',
           unstable_transformProfile: 'default',
         },
         unstable_allowRequireContext: false,
-        unstable_enablePackageExports: false,
+        unstable_enablePackageExports: true,
+        unstable_incrementalResolution: false,
       });
     });
   });
@@ -988,11 +1068,13 @@ describe('processRequest', () => {
           '/root/mybundle.js',
           'this\nis\njust an example and it is all fake data, yay!',
         );
+        fs.writeFileSync('/root/foo.js', 'mock data');
       });
 
       test('should symbolicate given stack trace', async () => {
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1045,7 +1127,8 @@ describe('processRequest', () => {
           };
 
           const response = await makeRequest('/symbolicate', {
-            rawBody: JSON.stringify({
+            headers: {'content-type': 'application/json'},
+            data: JSON.stringify({
               stack: [
                 {
                   file: `http://localhost:8081/my__REMOVE_THIS_WHEN_REWRITING__bundle.bundle${queryDelimiter}runModule=true`,
@@ -1059,7 +1142,8 @@ describe('processRequest', () => {
             JSON.parse(
               (
                 await makeRequest('/symbolicate', {
-                  rawBody: JSON.stringify({
+                  headers: {'content-type': 'application/json'},
+                  data: JSON.stringify({
                     stack: [
                       {
                         file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1082,7 +1166,8 @@ describe('processRequest', () => {
           };
 
           const response = await makeRequest('/symbolicate', {
-            rawBody: JSON.stringify({
+            headers: {'content-type': 'application/json'},
+            data: JSON.stringify({
               stack: [
                 {
                   file: `http://localhost:8081/my__REMOVE_THIS_WHEN_REWRITING__bundle.bundle${queryDelimiter}runModule=true`,
@@ -1100,7 +1185,8 @@ describe('processRequest', () => {
 
       test('should update the graph when symbolicating a second time', async () => {
         const requestData = {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1113,7 +1199,7 @@ describe('processRequest', () => {
           }),
         };
 
-        const IncrementalBundler = require('../../IncrementalBundler');
+        const IncrementalBundler = require('../../IncrementalBundler').default;
         const updateSpy = jest.spyOn(
           IncrementalBundler.prototype,
           'updateGraph',
@@ -1137,7 +1223,8 @@ describe('processRequest', () => {
 
       test('supports the `modulesOnly` option', async () => {
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true&modulesOnly=true`,
@@ -1161,7 +1248,8 @@ describe('processRequest', () => {
 
       test('supports the `shallow` option', async () => {
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true&shallow=true`,
@@ -1202,7 +1290,8 @@ describe('processRequest', () => {
 
       test('should symbolicate function name if available', async () => {
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1226,7 +1315,8 @@ describe('processRequest', () => {
         // NOTE: See implementation of symbolicator.customizeFrame above.
 
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1251,7 +1341,8 @@ describe('processRequest', () => {
         // NOTE: See implementation of symbolicator.customizeStack above.
 
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
@@ -1276,11 +1367,44 @@ describe('processRequest', () => {
         });
       });
 
+      test('should return null codeFrame when symbolicated file is not in the dependency graph', async () => {
+        const depGraph = await getDependencyGraph();
+        depGraph.doesFileExist.mockReturnValue(false);
+
+        const response = await makeRequest('/symbolicate', {
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
+            stack: [
+              {
+                file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true`,
+                lineNumber: 2,
+                column: 18,
+                methodName: 'clientSideMethodName',
+              },
+            ],
+          }),
+        });
+
+        const result = response._getJSON();
+        // Symbolication should still succeed
+        expect(result.stack).toEqual([
+          expect.objectContaining({
+            file: '/root/mybundle.js',
+            lineNumber: 1,
+            column: 0,
+            methodName: 'clientSideMethodName',
+          }),
+        ]);
+        // But codeFrame should be null since the file is not in the dep graph
+        expect(result.codeFrame).toBeNull();
+      });
+
       // TODO: This probably should restore the *original* file before rewrite
       // or normalisation.
       test('should leave original file and position when cannot symbolicate (after normalisation and rewriting?)', async () => {
         const response = await makeRequest('/symbolicate', {
-          rawBody: JSON.stringify({
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({
             stack: [
               {
                 file: `http://localhost:8081/mybundle.bundle${queryDelimiter}runModule=true&foo__REMOVE_THIS_WHEN_REWRITING__=bar`,
@@ -1312,19 +1436,136 @@ describe('processRequest', () => {
   );
 
   describe('/symbolicate handles errors', () => {
-    test('should symbolicate given stack trace', async () => {
-      const body = 'clearly-not-json';
-      // $FlowFixMe[cannot-write]
-      console.error = jest.fn();
+    test.each([
+      ['clearly-not-json'],
+      ...['a string', null, [], 47, {}].map(input => [JSON.stringify(input)]),
+    ])('should respond 400 on invalid input: %s', async body => {
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const response = await makeRequest('/symbolicate', {
-        rawBody: body,
+        headers: {'content-type': 'application/json'},
+        data: body,
       });
-      expect(response.statusCode).toEqual(500);
+      expect(response.statusCode).toEqual(400);
       expect(response._getJSON()).toEqual({
-        error: expect.any(String),
+        error:
+          body === 'clearly-not-json'
+            ? expect.stringContaining('not valid JSON')
+            : 'Bad symbolication input, expected object with stack array, got: ' +
+              body,
       });
-      expect(console.error).toBeCalled();
+      expect(errorSpy).not.toBeCalled();
+    });
+
+    test.each([
+      [[], 'frame to be a JSON object'],
+      ['', 'frame to be a JSON object'],
+      [{file: 2}, 'file to be string or nullish'],
+      [{methodName: 2}, 'methodName to be string or nullish'],
+      [{lineNumber: 'foo'}, 'lineNumber to be number or nullish'],
+      [{column: 'bar'}, 'column to be number or nullish'],
+    ])(
+      'should respond 400 on an invalid frame input: %s',
+      async (frame, expectedReason) => {
+        const errorSpy = jest
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
+
+        const response = await makeRequest('/symbolicate', {
+          headers: {'content-type': 'application/json'},
+          data: JSON.stringify({stack: [frame]}),
+        });
+        expect(response.statusCode).toEqual(400);
+        expect(response._getJSON()).toEqual({
+          error: 'Bad frame at line 0: Expected ' + expectedReason,
+        });
+        expect(errorSpy).not.toBeCalled();
+      },
+    );
+  });
+
+  describe('watchFolder prefix resolution', () => {
+    let watchFolderServer: $FlowFixMe;
+
+    beforeEach(() => {
+      watchFolderServer = new Server(
+        mergeConfig(getDefaultValues('/'), {
+          projectRoot: '/project',
+          watchFolders: ['/project', '/external/packages'],
+          resolver: {blockList: []},
+          cacheVersion: '',
+          serializer: {
+            getRunModuleStatement: moduleId =>
+              `require(${JSON.stringify(moduleId)});`,
+            polyfillModuleNames: [],
+            getModulesRunBeforeMainModule: () => ['InitializeCore'],
+          },
+          reporter: require('../../lib/reporting').nullReporter,
+        } as InputConfigT),
+      );
+    });
+
+    test('resolves [metro-watchFolders]/N/ prefix against the Nth watch folder', () => {
+      expect(
+        watchFolderServer._resolveWatchFolderPrefix(
+          './[metro-watchFolders]/1/expo-router/entry',
+        ),
+      ).toEqual({
+        rootDir: '/external/packages',
+        filePath: './expo-router/entry',
+      });
+    });
+
+    test('resolves [metro-watchFolders]/0/ prefix against the first watch folder', () => {
+      expect(
+        watchFolderServer._resolveWatchFolderPrefix(
+          './[metro-watchFolders]/0/app/index',
+        ),
+      ).toEqual({
+        rootDir: '/project',
+        filePath: './app/index',
+      });
+    });
+
+    test('resolves [metro-project]/ prefix against projectRoot', () => {
+      expect(
+        watchFolderServer._resolveWatchFolderPrefix(
+          './[metro-project]/src/App',
+        ),
+      ).toEqual({
+        rootDir: '/project',
+        filePath: './src/App',
+      });
+    });
+
+    test('returns null for paths without a recognized prefix', () => {
+      expect(
+        watchFolderServer._resolveWatchFolderPrefix('./mybundle'),
+      ).toBeNull();
+    });
+
+    test('returns null for out-of-bounds watchFolder index', () => {
+      expect(
+        watchFolderServer._resolveWatchFolderPrefix(
+          './[metro-watchFolders]/99/mybundle',
+        ),
+      ).toBeNull();
+    });
+
+    test('_getEntryPointAbsolutePath resolves prefixed entry against the corresponding watch folder', () => {
+      expect(
+        watchFolderServer._getEntryPointAbsolutePath(
+          './[metro-watchFolders]/1/expo-router/entry',
+        ),
+      ).toBe('/external/packages/expo-router/entry');
+    });
+
+    test('_getEntryPointAbsolutePath resolves non-prefixed entry against server root', () => {
+      expect(watchFolderServer._getEntryPointAbsolutePath('./mybundle')).toBe(
+        '/project/mybundle',
+      );
     });
   });
 });

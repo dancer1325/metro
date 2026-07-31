@@ -9,22 +9,27 @@
  * @oncall react_native
  */
 
-'use strict';
+import getPreludeCode from '../getPreludeCode';
 
-const getPreludeCode = require('../getPreludeCode');
-const vm = require('vm');
+const vm = require('node:vm');
 
 ['development', 'production'].forEach((mode: string) => {
   describe(`${mode} mode`, () => {
     const isDev = mode === 'development';
     const globalPrefix = '__metro';
     const requireCycleIgnorePatterns: Array<RegExp> = [];
+    const unstable_forceFullRefreshPatterns: Array<RegExp> = [];
 
     test('sets up `process.env.NODE_ENV` and `__DEV__`', () => {
       const sandbox: $FlowFixMe = {};
       vm.createContext(sandbox);
       vm.runInContext(
-        getPreludeCode({isDev, globalPrefix, requireCycleIgnorePatterns}),
+        getPreludeCode({
+          isDev,
+          globalPrefix,
+          requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns,
+        }),
         sandbox,
       );
       expect(sandbox.process.env.NODE_ENV).toEqual(mode);
@@ -39,6 +44,7 @@ const vm = require('vm');
           isDev,
           globalPrefix: '__customPrefix',
           requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns,
         }),
         sandbox,
       );
@@ -56,6 +62,7 @@ const vm = require('vm');
             /blah/,
             /(^|\/|\\)node_modules($|\/|\\)/,
           ],
+          unstable_forceFullRefreshPatterns,
         }),
         sandbox,
       );
@@ -72,12 +79,41 @@ const vm = require('vm');
       }
     });
 
+    test('sets up `${globalPrefix}__unstable_forceFullRefreshPatterns` in development', () => {
+      const sandbox: $FlowFixMe = {};
+      vm.createContext(sandbox);
+      vm.runInContext(
+        getPreludeCode({
+          isDev,
+          globalPrefix,
+          requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns: [/\.stylex/, /\.theme/],
+        }),
+        sandbox,
+      );
+
+      if (isDev) {
+        expect(
+          sandbox[`${globalPrefix}__unstable_forceFullRefreshPatterns`],
+        ).toEqual([/\.stylex/, /\.theme/]);
+      } else {
+        expect(
+          sandbox[`${globalPrefix}__unstable_forceFullRefreshPatterns`],
+        ).not.toBeDefined();
+      }
+    });
+
     test('does not override an existing `process.env`', () => {
       const nextTick = () => {};
       const sandbox: $FlowFixMe = {process: {nextTick, env: {FOOBAR: 123}}};
       vm.createContext(sandbox);
       vm.runInContext(
-        getPreludeCode({isDev, globalPrefix, requireCycleIgnorePatterns}),
+        getPreludeCode({
+          isDev,
+          globalPrefix,
+          requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns,
+        }),
         sandbox,
       );
       expect(sandbox.process.env.NODE_ENV).toEqual(mode);
@@ -95,6 +131,7 @@ const vm = require('vm');
           isDev,
           globalPrefix,
           requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns,
           extraVars: {FOO, BAR},
         }),
         sandbox,
@@ -111,6 +148,7 @@ const vm = require('vm');
           isDev,
           globalPrefix,
           requireCycleIgnorePatterns,
+          unstable_forceFullRefreshPatterns,
           extraVars: {__DEV__: 123},
         }),
         sandbox,

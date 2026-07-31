@@ -11,7 +11,7 @@
 import checkWatchmanCapabilities from '../checkWatchmanCapabilities';
 
 const mockExecFile = jest.fn();
-jest.mock('child_process', () => ({
+jest.mock('node:child_process', () => ({
   execFile: (...args) => mockExecFile(...args),
 }));
 
@@ -20,7 +20,7 @@ const mockSuccessResponse = JSON.stringify({
   capabilities: ['c1', 'c2'],
 });
 
-function setMockExecFileResponse(err: mixed, stdout?: mixed) {
+function setMockExecFileResponse(err: unknown, stdout?: unknown) {
   mockExecFile.mockImplementation((file, args, cb) => {
     expect(file).toBe('watchman');
     cb(err, err == null ? {stdout} : null);

@@ -10,12 +10,12 @@
  */
 
 import type {DefineFn, RequireFn} from '../require';
-import typeof React from 'react';
+import typeof * as ReactModule from 'react';
 import typeof ReactRefreshRuntime from 'react-refresh/runtime';
 import typeof ReactTestRenderer from 'react-test-renderer';
 
 import {transformSync} from '@babel/core';
-import fs from 'fs';
+import fs from 'node:fs';
 
 type RuntimeGlobal = Object;
 
@@ -47,7 +47,7 @@ export class Runtime {
    * The instance of React running in this runtime. Conceptually equivalent to
    * require('react').
    */
-  React: React;
+  React: ReactModule;
 
   /**
    * The React renderer running in this runtime. Conceptually equivalent to
@@ -86,8 +86,8 @@ export class Runtime {
 
     // Set up Fast Refresh. Adapted from `setUpReactRefresh.js` in React Native.
     jest.isolateModules(() => {
-      // $FlowFixMe[incompatible-type] Not sure why Flow doesn't approve
-      // $FlowFixMe[prop-missing]
+      // Configure the act environment for React 19
+      global.IS_REACT_ACT_ENVIRONMENT = true;
       this.React = require('react');
 
       this.#reactRefreshRuntime = require('react-refresh/runtime');
@@ -121,7 +121,9 @@ export class Runtime {
           this.events.onFullReload('Fast Refresh - Unrecoverable');
           return;
         }
-        this.#reactRefreshRuntime.performReactRefresh();
+        this.renderer.act(() => {
+          this.#reactRefreshRuntime.performReactRefresh();
+        });
         this.events.onFastRefresh();
       },
     };
@@ -142,7 +144,7 @@ const moduleSystemCode = (() => {
   }).code;
 })();
 
-const createModuleSystem: (RuntimeGlobal, boolean, string) => mixed =
+const createModuleSystem: (RuntimeGlobal, boolean, string) => unknown =
   // eslint-disable-next-line no-new-func
   new Function(
     'global',

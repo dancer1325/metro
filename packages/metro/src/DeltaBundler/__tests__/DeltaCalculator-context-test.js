@@ -12,13 +12,15 @@
 'use strict';
 
 import type {Result} from '../Graph';
-import type {Options, TransformResultDependency} from '../types.flow';
+import type {Options, TransformResultDependency} from '../types';
 
 import CountingSet from '../../lib/CountingSet';
+import DeltaCalculator from '../DeltaCalculator';
 import {Graph} from '../Graph';
+import {createEmitChange, createPathNormalizer} from './test-utils';
+import path from 'node:path';
 
-const DeltaCalculator = require('../DeltaCalculator');
-const {EventEmitter} = require('events');
+const {EventEmitter} = require('node:events');
 
 const traverseDependencies = jest.spyOn(
   Graph.prototype,
@@ -36,10 +38,13 @@ const markModifiedContextModules = jest.spyOn(
 describe('DeltaCalculator + require.context', () => {
   let deltaCalculator;
   let fileWatcher;
+  let emitChange;
+  const p = createPathNormalizer();
 
-  const options = {
+  const options: Options<> = {
     unstable_allowRequireContext: true,
     unstable_enablePackageExports: false,
+    unstable_incrementalResolution: false,
     lazy: false,
     onProgress: null,
     resolve: (from: string, to: TransformResultDependency) => {
@@ -52,7 +57,6 @@ describe('DeltaCalculator + require.context', () => {
     transformOptions: {
       // NOTE: These options are ignored because we mock out the transformer (via traverseDependencies).
       dev: false,
-      hot: false,
       minify: false,
       platform: null,
       type: 'module',
@@ -62,14 +66,15 @@ describe('DeltaCalculator + require.context', () => {
 
   beforeEach(async () => {
     fileWatcher = new EventEmitter();
+    emitChange = createEmitChange(fileWatcher, p('/'), path.sep);
 
     markModifiedContextModules.mockImplementation(function <T>(
       this: Graph<T>,
       filePath,
       modifiedContexts,
     ) {
-      if (filePath.startsWith('/ctx/')) {
-        modifiedContexts.add('/ctx?ctx=xxx');
+      if (filePath.startsWith(p('/ctx/'))) {
+        modifiedContexts.add(p('/ctx?ctx=xxx'));
       }
     });
 
@@ -83,47 +88,57 @@ describe('DeltaCalculator + require.context', () => {
       this: Graph<T>,
       options: Options<T>,
     ): Promise<Result<T>> {
-      this.dependencies.set('/bundle', {
+      this.dependencies.set(p('/bundle'), {
         dependencies: new Map([
           [
             'ctx',
             {
-              absolutePath: '/ctx?ctx=xxx',
+              absolutePath: p('/ctx?ctx=xxx'),
               data: {
                 name: 'ctx',
-                data: {key: 'ctx?ctx=xxx', asyncType: null, locs: []},
+                data: {
+                  key: 'ctx?ctx=xxx',
+                  asyncType: null,
+                  isESMImport: false,
+                  locs: [],
+                },
               },
             },
           ],
         ]),
         inverseDependencies: new CountingSet([]),
         output: [],
-        path: '/bundle',
+        path: p('/bundle'),
         getSource: () => Buffer.of(),
       });
-      this.dependencies.set('/ctx?ctx=xxx', {
+      this.dependencies.set(p('/ctx?ctx=xxx'), {
         dependencies: new Map([
           [
             'foo',
             {
-              absolutePath: '/ctx/foo',
+              absolutePath: p('/ctx/foo'),
               data: {
                 name: 'foo',
-                data: {key: 'foo', asyncType: null, locs: []},
+                data: {
+                  key: 'foo',
+                  asyncType: null,
+                  isESMImport: false,
+                  locs: [],
+                },
               },
             },
           ],
         ]),
-        inverseDependencies: new CountingSet(['/bundle']),
+        inverseDependencies: new CountingSet([p('/bundle')]),
         output: [],
-        path: '/ctx?ctx=xxx',
+        path: p('/ctx?ctx=xxx'),
         getSource: () => Buffer.of(),
       });
-      this.dependencies.set('/ctx/foo', {
+      this.dependencies.set(p('/ctx/foo'), {
         dependencies: new Map(),
-        inverseDependencies: new CountingSet(['/ctx?ctx=xxx']),
+        inverseDependencies: new CountingSet([p('/ctx?ctx=xxx')]),
         output: [],
-        path: '/ctx/foo',
+        path: p('/ctx/foo'),
         getSource: () => Buffer.of(),
       });
 
@@ -145,7 +160,7 @@ describe('DeltaCalculator + require.context', () => {
 
     // $FlowFixMe[underconstrained-implicit-instantiation]
     deltaCalculator = new DeltaCalculator(
-      new Set(['/bundle']),
+      new Set([p('/bundle')]),
       fileWatcher,
       options,
     );
@@ -162,11 +177,7 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'delete', filePath: '/ctx/foo', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({removedFiles: ['ctx/foo']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -175,7 +186,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx?ctx=xxx'],
+      [p('/ctx?ctx=xxx')],
       expect.anything(),
     );
 
@@ -189,11 +200,7 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'add', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({addedFiles: ['ctx/foo2']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -202,7 +209,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx?ctx=xxx'],
+      [p('/ctx?ctx=xxx')],
       expect.anything(),
     );
 
@@ -213,11 +220,7 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'change', filePath: '/ctx/foo', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({modifiedFiles: ['ctx/foo']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -226,7 +229,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx/foo'],
+      [p('/ctx/foo')],
       expect.anything(),
     );
 
@@ -237,11 +240,7 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'change', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({modifiedFiles: ['ctx/foo2']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -256,17 +255,9 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'add', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({addedFiles: ['ctx/foo2']});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'change', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({modifiedFiles: ['ctx/foo2']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -275,7 +266,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx?ctx=xxx'],
+      [p('/ctx?ctx=xxx')],
       expect.anything(),
     );
 
@@ -286,17 +277,9 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'add', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({addedFiles: ['ctx/foo2']});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'delete', filePath: '/ctx/foo2', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({removedFiles: ['ctx/foo2']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -311,15 +294,9 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'delete', filePath: '/ctx/foo', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({removedFiles: ['ctx/foo']});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [{type: 'add', filePath: '/ctx/foo', metadata: {type: 'f'}}],
-    });
+    emitChange({addedFiles: ['ctx/foo']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -328,7 +305,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx/foo'],
+      [p('/ctx/foo')],
       expect.anything(),
     );
   });
@@ -337,17 +314,9 @@ describe('DeltaCalculator + require.context', () => {
     // Initial build
     await deltaCalculator.getDelta({reset: false, shallow: false});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'change', filePath: '/ctx/foo', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({modifiedFiles: ['ctx/foo']});
 
-    fileWatcher.emit('change', {
-      eventsQueue: [
-        {type: 'delete', filePath: '/ctx/foo', metadata: {type: 'f'}},
-      ],
-    });
+    emitChange({removedFiles: ['ctx/foo']});
 
     // Incremental build
     await deltaCalculator.getDelta({
@@ -356,7 +325,7 @@ describe('DeltaCalculator + require.context', () => {
     });
 
     expect(traverseDependencies).toBeCalledWith(
-      ['/ctx?ctx=xxx'],
+      [p('/ctx?ctx=xxx')],
       expect.anything(),
     );
 

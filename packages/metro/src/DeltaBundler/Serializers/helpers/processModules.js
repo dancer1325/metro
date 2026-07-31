@@ -9,14 +9,12 @@
  * @oncall react_native
  */
 
-'use strict';
+import type {Module} from '../../types';
 
-import type {Module} from '../../types.flow';
+import {isJsModule, wrapModule} from './js';
 
-const {isJsModule, wrapModule} = require('./js');
-
-function processModules(
-  modules: $ReadOnlyArray<Module<>>,
+export default function processModules(
+  modules: ReadonlyArray<Module<>>,
   {
     filter = () => true,
     createModuleId,
@@ -25,7 +23,9 @@ function processModules(
     projectRoot,
     serverRoot,
     sourceUrl,
-  }: $ReadOnly<{
+    dependencyMapReservedName,
+    unstable_inlineDependencyMap,
+  }: Readonly<{
     filter?: (module: Module<>) => boolean,
     createModuleId: string => number,
     dev: boolean,
@@ -33,8 +33,10 @@ function processModules(
     projectRoot: string,
     serverRoot: string,
     sourceUrl: ?string,
+    dependencyMapReservedName?: ?string,
+    unstable_inlineDependencyMap?: boolean,
   }>,
-): $ReadOnlyArray<[Module<>, string]> {
+): ReadonlyArray<[Module<>, string]> {
   return [...modules]
     .filter(isJsModule)
     .filter(filter)
@@ -47,8 +49,8 @@ function processModules(
         projectRoot,
         serverRoot,
         sourceUrl,
+        dependencyMapReservedName,
+        unstable_inlineDependencyMap,
       }),
     ]);
 }
-
-module.exports = processModules;

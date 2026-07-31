@@ -9,16 +9,15 @@
  * @oncall react_native
  */
 
-'use strict';
+import exclusionList from '../exclusionList';
 
-const exclusionList = require('../exclusionList');
-const path = require('path');
+const path = require('node:path');
 
 describe('exclusionList', () => {
   let originalSeparator;
 
   function setPathSeperator(sep: string) {
-    // $FlowFixMe: property sep is not writable.
+    // $FlowFixMe[cannot-write]: property sep is not writable.
     path.sep = sep;
   }
 
@@ -27,15 +26,15 @@ describe('exclusionList', () => {
   });
 
   afterEach(() => {
-    // $FlowFixMe: property sep is not writable.
+    // $FlowFixMe[cannot-write]: property sep is not writable.
     path.sep = originalSeparator;
   });
 
   test('proves we can write to path.sep for setting up the tests', () => {
     setPathSeperator('/');
-    expect(require('path').sep).toBe('/');
+    expect(require('node:path').sep).toBe('/');
     setPathSeperator('\\');
-    expect(require('path').sep).toBe('\\');
+    expect(require('node:path').sep).toBe('\\');
   });
 
   describe('simulate macOS/linux enviornment', () => {
