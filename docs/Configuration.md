@@ -4,17 +4,19 @@ title: Configuring Metro
 ---
 
 * Metro config
-  * ways to create it / ordered by priority
+  * ways to create it / ⚠️ordered by priority⚠️
     1. `metro.config.js` / `metro.config.cjs` / `metro.config.mjs`
     2. `metro.config.ts` / `metro.config.cts` / `metro.config.mts`
     3. `metro.config.json`
     4. `.config/metro.js` / `.config/metro.cjs` / `.config/metro.mjs` / `.config/metro.ts` / `.config/metro.cts` / `.config/metro.mts` / `.config/metro.json`
     5. `package.json`'s `metro` field
     6. `metro ... --config pathToConfigFile`
-    5. Metro / started -- via the -- React Native CLI
-       6. see the [React Native repository](https://github.com/facebook/react-native/blob/main/packages/community-cli-plugin/src/utils/loadMetroConfig.js)
-
-TypeScript config files are supported in Node.js 24.0.0+ or Node.js 22.6.0+ with the `--experimental-strip-types` flag. If your Node.js version doesn't support loading TypeScript natively, you'll see an error with instructions when attempting to load a TypeScript config file.
+    7. [Metro / started -- via the -- React Native CLI](https://github.com/facebook/react-native/blob/main/packages/community-cli-plugin/src/utils/loadMetroConfig.js)
+  * TypeScript config files
+    * ⚠️requirements⚠️
+      * Node.js 24.0.0+ OR Node.js 22.6.0+ + `--experimental-strip-types` flag
+        * Reason:🧠support loading TypeScript natively🧠
+        * OTHERWISE, prompt an error
 
 ## Configuration Structure
 
@@ -47,35 +49,35 @@ TypeScript config files are supported in Node.js 24.0.0+ or Node.js 22.6.0+ with
     };
     ```
 
-```typescript
-// metro.config.mts
-import type {MetroConfig} from 'metro-config';
-
-const config: MetroConfig = {
-  /* general options */
-
-  resolver: {
-    /* resolver options */
-  },
-  transformer: {
-    /* transformer options */
-  },
-  serializer: {
-    /* serializer options */
-  },
-  server: {
-    /* server options */
-  },
-  watcher: {
-    /* watcher options */
-    watchman: {
-      /* Watchman-specific options */
-    }
-  }
-};
-
-export default config;
-```
+    ```typescript
+    // metro.config.mts
+    import type {MetroConfig} from 'metro-config';
+    
+    const config: MetroConfig = {
+      /* general options */
+    
+      resolver: {
+        /* resolver options */
+      },
+      transformer: {
+        /* transformer options */
+      },
+      serializer: {
+        /* serializer options */
+      },
+      server: {
+        /* server options */
+      },
+      watcher: {
+        /* watcher options */
+        watchman: {
+          /* Watchman-specific options */
+        }
+      }
+    };
+    
+    export default config;
+    ```
 
 ### General Options
 
@@ -554,10 +556,10 @@ Where to fetch the assets from.
   * -- via Babel -- compiles code
   * return
     * AST
-    * optional metadata
+    * OPTIONAL metadata
   * by default, `metro-babel-transformer`
 
-* -- refer to -- [`metro-babel-transformer`](https://github.com/facebook/metro/blob/main/packages/metro-babel-transformer/src/index.js)
+* -- refer to -- [`metro-babel-transformer`](../packages/metro-babel-transformer/src/index.js)
   * [`@react-native/metro-babel-transformer`](https://github.com/facebook/react-native/blob/main/packages/react-native-babel-transformer/src/index.js)
     * 👀how to implement a CUSTOM Babel transformer 👀
 
