@@ -57,7 +57,8 @@ module.exports = {
 
 ## Custom cache stores
 
-To implement a custom cache store, pass an instance of a class with the following interface into [`cacheStores`](./Configuration.md#cachestores):
+* steps to implement It
+  *  pass an instance of a class with the following interface into [`cacheStores`](./Configuration.md#cachestores):
 
 ```flow
 interface CacheStore<T: Buffer | JsonSerializable> {
