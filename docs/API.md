@@ -100,8 +100,8 @@ If `assets` is `true`, an array of `AssetData` will be generated and returned in
     * OPTIONAL 
     * == function /
       * called | finish creating the bundle
+      * 's argument: bundle name
 * create a Connect middleware /
   * answers -- to -- bundle requests
   * can be plugged | your OWN servers
 
-The `onBundleBuilt` function is optional, is passed the bundle name, and is called when the server has finishing .
