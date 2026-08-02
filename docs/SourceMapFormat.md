@@ -3,15 +3,18 @@ id: source-map-format
 title: Source Map Format
 ---
 
-Metro produces standard [source maps](https://sourcemaps.info/spec.html) along with its JavaScript bundle output. In addition to the standard information, Metro encodes extra information in [vendor-specific fields](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm) within the source map. This page serves as a specification for this encoding.
+* Metro 
+  * produces
+    * standard [source maps](https://sourcemaps.info/spec.html) + its JavaScript bundle output
+      * [vendor-specific fields](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm) | source map, are encoded
 
-:::note
-The content on this page assumes familiarity with the [source map specification](https://sourcemaps.info/spec.html). Check out [Anatomy of source maps](https://www.bugsnag.com/blog/source-maps) for a general introduction to source maps and how they work.
-:::
+
+ [anatomy of source maps](https://www.bugsnag.com/blog/source-maps) 
 
 ## `x_facebook_sources`
 
-The `x_facebook_sources` field encodes metadata about source files in a source map. Each piece of metadata represents some attribute intrinsic to the source code of that particular file - for example, the result of running some analysis over the AST. This allows tools such as debuggers and JS engines to access such analyses efficiently, without needing to parse or even have access to the source code.
+* == field / encodes files' metadata | source map
+ Each piece of metadata represents some attribute intrinsic to the source code of that particular file - for example, the result of running some analysis over the AST. This allows tools such as debuggers and JS engines to access such analyses efficiently, without needing to parse or even have access to the source code.
 
 In the same way that the standard [`sources`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=sourceRoot%22%3A%20%22%22%2C-,%22sources%22%3A,-%5B%22foo.js%22%2C%20%22bar) field is a list of source URLs and [`sourcesContent`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=js%22%2C%20%22bar.js%22%5D%2C-,%22sourcesContent%22%3A,-%5Bnull%2C%20null%5D%2C) is a list of (optional) source code strings, `x_facebook_sources` is a list of optional **metadata tuples**. The _i_-th metadata tuple (`x_facebook_sources[i]`) corresponds to the source file whose URL is `sources[i]`.
 
