@@ -3,7 +3,10 @@ id: resolution
 title: Module Resolution
 ---
 
-Module resolution is the process of translating module names to module paths at build time. For example, if your project contains the code:
+* Module resolution
+  * == process of translating module names -- to -- module paths | build time
+
+ For example, if your project contains the code:
 
 ```js
 // src/App.js
@@ -11,7 +14,9 @@ import {View} from 'react-native';
 // ...
 ```
 
-Metro needs to know where in your project to load the `react-native` module from. This will typically resolve to something like `node_modules/react-native/index.js`.
+* uses
+  * Metro can know where to load the `react-native` module from
+    * _Example of COMMON value:_ `node_modules/react-native/index.js`
 
 Likewise, if your project contains the (similar) code:
 
@@ -23,13 +28,12 @@ import Comp from './Component';
 
 Metro needs to understand that you are referring to, say, `src/Component.js`, and not another file named `Component` that may also exist elsewhere.
 
-Metro implements a version of [Node's module resolution algorithm](https://nodejs.org/api/modules.html#loading-from-node_modules-folders), augmented with additional Metro-specific features.
-
-These Metro-specific features include:
-* **Haste**: An opt-in mechanism for importing modules by their globally-unique name anywhere in the project, e.g. `import Foo from 'Foo'`.
-* **Platform extensions**: Used by [React Native](https://reactnative.dev/docs/platform-specific-code#platform-specific-extensions) to allow developers to write platform-specific versions of their JavaScript modules.
-* **Asset extensions and image resolutions**: Used by [React Native](https://reactnative.dev/docs/images#static-image-resources) to automatically select the best version of an image asset based on the device's screen density at runtime.
-* **Custom resolvers**: Metro integrators can provide their own resolver implementations to override almost everything about how modules are resolved.
+* == [Node's module resolution algorithm](https://nodejs.org/api/modules.html#loading-from-node_modules-folders) + ADDITIONAL Metro-specific features
+  * Metro-specific features
+    * **Haste**: An opt-in mechanism for importing modules by their globally-unique name anywhere in the project, e.g. `import Foo from 'Foo'`.
+    * **Platform extensions**: Used by [React Native](https://reactnative.dev/docs/platform-specific-code#platform-specific-extensions) to allow developers to write platform-specific versions of their JavaScript modules.
+    * **Asset extensions and image resolutions**: Used by [React Native](https://reactnative.dev/docs/images#static-image-resources) to automatically select the best version of an image asset based on the device's screen density at runtime.
+    * **Custom resolvers**: Metro integrators can provide their own resolver implementations to override almost everything about how modules are resolved.
 
 ## Resolution algorithm
 
