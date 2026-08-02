@@ -6,29 +6,36 @@ title: Caching
 * local cache of [transformed modules](./Concepts.md#transformation)
   * speeds up builds
   * ONLY if the source code changes -> Metro retransforms modules
+  * _Example:_ `FileStore`
 
 * remote cache
   * speed up builds 
   * use cases
     * larger teams 
     * larger codebases
+      * _Example:_ Meta
+  * typical setup
+    1. storage backend / team-specific
+      * _Example:_ S3 bucket
+    2. Run [`metro build`](./CLI.md#build-entry) PERIODICALLY
+      * _Example:_ | CI
+      * populate the cache -- , via `HttpStore`  OR custom read/write cache store, --  | your Metro config
+    3. Configure Metro | your development machines -- , via `HttpGetStore` OR CUSTOM read-only cache store | your Metro config, to -- read -- from the -- cache
+  * _Example:_ `HttpCache`
 
-* _Example:_ this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
+* [`cacheStores`](./Configuration.md#cachestores)
+  * == Metro cache's main configuration option
 
-A typical setup for a remote cache involves:
-
-1. A storage backend specific to your team (e.g. S3 bucket).
-2. Running [`metro build`](./CLI.md#build-entry) periodically (e.g. in a CI job) to populate the cache, using `HttpStore` (or a custom read/write cache store) in your Metro config.
-3. Configuring Metro on your development machines to read from the cache, using `HttpGetStore` (or a custom read-only cache store) in your Metro config.
-
-The main option for configuring the Metro cache is [`cacheStores`](./Configuration.md#cachestores). Typically, the local cache (e.g. `FileStore`) should be listed first, followed by the remote cache (e.g. `HttpCache`).
+* recommendations | list caches
+  * local cache 
+  * remote cache 
 
 ## Built-in cache stores
 
-Metro provides a number of built-in cache store implementations for use with the [`cacheStores`](./Configuration.md#cachestores) config option:
-
-* **`FileStore({root: string})`** will store cache entries as files under the directory specified by `root`.
-* **`AutoCleanFileStore()`** <div class="label deprecated">Deprecated</div> is a `FileStore` that periodically cleans up old entries. It accepts the same options as `FileStore` plus the following:
+* uses
+  * \+ [`cacheStores`](./Configuration.md#cachestores) config option
+    * **`FileStore({root: string})`** will store cache entries as files under the directory specified by `root`.
+    * **`AutoCleanFileStore()`** <div class="label deprecated">Deprecated</div> is a `FileStore` that periodically cleans up old entries. It accepts the same options as `FileStore` plus the following:
   * **`options.intervalMs: number`** is the time in milliseconds between cleanup attempts. Defaults to 10 minutes.
   * **`options.cleanupThresholdMs: number`** is the minimum time in milliseconds since the last modification of an entry before it can be deleted. Defaults to 3 days.
 * **`HttpStore(options)`** is a bare-bones remote cache client that reads (`GET`) and writes (`PUT`) compressed cache artifacts over HTTP or HTTPS.
