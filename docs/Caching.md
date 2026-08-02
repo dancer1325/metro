@@ -5,10 +5,14 @@ title: Caching
 
 * local cache of [transformed modules](./Concepts.md#transformation)
   * speeds up builds
-  * Metro doesn't need to retransform modules unless the source code (or current configuration) has changed since the last time they were transformed.
+  * ONLY if the source code changes -> Metro retransforms modules
 
-Metro also has the ability to use a **remote cache**
-This can dramatically speed up builds for larger teams and/or larger codebases by reducing the amount of time spent locally building remote changes even further
+* remote cache
+  * speed up builds 
+  * use cases
+    * larger teams 
+    * larger codebases
+
  For example, this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
 
 A typical setup for a remote cache involves:
