@@ -84,20 +84,24 @@ If `assets` is `true`, an array of `AssetData` will be generated and returned in
 
 **Basic options:** `host`, `port`, `secureServerOptions`, `secure (DEPRECATED)`, `secureKey (DEPRECATED)`, `secureCert (DEPRECATED)`
 
-Starts a full Metro HTTP server. 
-It will listen on the specified `host:port`, and can then be queried to retrieve bundles for various entry points.
-If the `secureServerOptions` family of options are present, the server will be exposed over HTTPS.
-
-`secure`, `secureKey`, `secureCert` are now deprecated and will be removed in a later release.
-The presence of `secureServerOptions`, along with its options will make Metro run over https.
+* start a FULL Metro HTTP server /
+  * listen | specified `host:port`
+  * can be queried -- to -- retrieve bundles / VARIOUS entry points
+  * if you specify `secureServerOptions` -> server will be exposed | HTTPS
 
 ### `createConnectMiddleware(config, <options>)`
 
 * **Basic options**
   * `port`
+    * OPTIONAL 
+    * uses
+      * login purposes
   * `onBundleBuilt`
+    * OPTIONAL 
+    * == function /
+      * called | finish creating the bundle
+* create a Connect middleware /
+  * answers -- to -- bundle requests
+  * can be plugged | your OWN servers
 
-Instead of creating the full server, creates a Connect middleware that answers to bundle requests.
-This middleware can then be plugged into your own servers.
-The `port` parameter is optional and only used for logging purposes. 
-The `onBundleBuilt` function is optional, is passed the bundle name, and is called when the server has finishing creating the bundle.
+The `onBundleBuilt` function is optional, is passed the bundle name, and is called when the server has finishing .
