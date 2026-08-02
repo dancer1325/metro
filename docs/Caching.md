@@ -3,9 +3,13 @@ id: caching
 title: Caching
 ---
 
-Out of the box, Metro speeds up builds using a **local cache** of [transformed](./Concepts.md#transformation) modules. Thanks to this cache, Metro doesn't need to retransform modules unless the source code (or current configuration) has changed since the last time they were transformed.
+* local cache of [transformed modules](./Concepts.md#transformation)
+  * speeds up builds
+  * Metro doesn't need to retransform modules unless the source code (or current configuration) has changed since the last time they were transformed.
 
-Metro also has the ability to use a **remote cache**. This can dramatically speed up builds for larger teams and/or larger codebases by reducing the amount of time spent locally building remote changes even further. For example, this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
+Metro also has the ability to use a **remote cache**
+This can dramatically speed up builds for larger teams and/or larger codebases by reducing the amount of time spent locally building remote changes even further
+ For example, this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
 
 A typical setup for a remote cache involves:
 
