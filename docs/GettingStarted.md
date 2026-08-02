@@ -75,7 +75,12 @@ app.listen(8081);
 
 * recommendations
   * 👀use `runMetro` instead of `runServer` 👀
-TODO: Starts a development server based on the given configuration and options. Returns an object with `httpServer`, the Node.js HTTP(S) server.
+    * Reason: 🧠it's called behind🧠
+* start a development server -- based on -- the given configuration & options
+* returns an
+  * object /
+    * contains `httpServer`
+      * == Node.js HTTP(S) server
 We recommend using `runMetro` instead of `runServer`, `runMetro` calls this function.
 
 ##### Options
@@ -200,7 +205,7 @@ Metro.loadConfig().then(async config => {
 
 ### Configuration
 
-* see [Configuring Metro](./Configuration.md)
+* [here](./Configuration.md)
 
 ## URL and bundle request
 
