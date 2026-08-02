@@ -13,7 +13,7 @@ title: Caching
     * larger teams 
     * larger codebases
 
- For example, this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
+* _Example:_ this is how we use Metro to build React Native apps at Meta (a codebase with many thousands of files and hundreds of daily active engineers).
 
 A typical setup for a remote cache involves:
 
