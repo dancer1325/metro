@@ -24,9 +24,17 @@ title: Source Map Format
     * _Example of tools:_ debuggers, JS engines
             
 * == list of OPTIONAL **metadata tuples**
+  * `x_facebook_sources[i]`
+    * == source file / URL == `sources[i]`
 
-In the same way that the standard [`sources`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=sourceRoot%22%3A%20%22%22%2C-,%22sources%22%3A,-%5B%22foo.js%22%2C%20%22bar) field is a list of source URLs and [`sourcesContent`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=js%22%2C%20%22bar.js%22%5D%2C-,%22sourcesContent%22%3A,-%5Bnull%2C%20null%5D%2C) is a list of (optional) source code strings,  The _i_-th metadata tuple (`x_facebook_sources[i]`) corresponds to the source file whose URL is `sources[i]`.
 
+* standard [`sources`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=sourceRoot%22%3A%20%22%22%2C-,%22sources%22%3A,-%5B%22foo.js%22%2C%20%22bar) field 
+  * == list of source URLs
+
+* [`sourcesContent`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=js%22%2C%20%22bar.js%22%5D%2C-,%22sourcesContent%22%3A,-%5Bnull%2C%20null%5D%2C)
+  * == list of (optional) source code strings, 
+
+TODO 
 In nested (indexed) source maps, `x_facebook_sources` may appear as part of any nested source map in [`sections`](https://sourcemaps.info/spec.html#h.535es3xeprgt) that itself has a `sources` field.
 
 If present, `x_facebook_sources` may be a different length than `sources` (but usually shouldn't be). In particular, if it's shorter than `sources`, `x_facebook_sources` interpreted as if it were padded with `null` values to match the length of `sources`.
