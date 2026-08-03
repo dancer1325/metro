@@ -14,9 +14,18 @@ title: Source Map Format
 ## `x_facebook_sources`
 
 * == field / encodes files' metadata | source map
- Each piece of metadata represents some attribute intrinsic to the source code of that particular file - for example, the result of running some analysis over the AST. This allows tools such as debuggers and JS engines to access such analyses efficiently, without needing to parse or even have access to the source code.
+  * EACH piece of metadata == some attribute intrinsic -- to the -- source code of that particular file
+    * _Example:_ result of running some analysis | AST
+* allows
+  * tools can access EFFICIENTLY such analyses
+    * WITHOUT 
+      * parking
+      * having access -- to the -- source code
+    * _Example of tools:_ debuggers, JS engines
+            
+* == list of OPTIONAL **metadata tuples**
 
-In the same way that the standard [`sources`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=sourceRoot%22%3A%20%22%22%2C-,%22sources%22%3A,-%5B%22foo.js%22%2C%20%22bar) field is a list of source URLs and [`sourcesContent`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=js%22%2C%20%22bar.js%22%5D%2C-,%22sourcesContent%22%3A,-%5Bnull%2C%20null%5D%2C) is a list of (optional) source code strings, `x_facebook_sources` is a list of optional **metadata tuples**. The _i_-th metadata tuple (`x_facebook_sources[i]`) corresponds to the source file whose URL is `sources[i]`.
+In the same way that the standard [`sources`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=sourceRoot%22%3A%20%22%22%2C-,%22sources%22%3A,-%5B%22foo.js%22%2C%20%22bar) field is a list of source URLs and [`sourcesContent`](https://sourcemaps.info/spec.html#h.ghqpj1ytqjbm:~:text=js%22%2C%20%22bar.js%22%5D%2C-,%22sourcesContent%22%3A,-%5Bnull%2C%20null%5D%2C) is a list of (optional) source code strings,  The _i_-th metadata tuple (`x_facebook_sources[i]`) corresponds to the source file whose URL is `sources[i]`.
 
 In nested (indexed) source maps, `x_facebook_sources` may appear as part of any nested source map in [`sections`](https://sourcemaps.info/spec.html#h.535es3xeprgt) that itself has a `sources` field.
 
