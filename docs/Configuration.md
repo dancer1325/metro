@@ -92,8 +92,8 @@ title: Configuring Metro
   * | transform a module,
     * Metro FIRST computes a machine-independent cache key / that file
     * Metrouses tries to read -- vía that key-- / EACH of the stores in order
-
-TODO: Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
+  * transformer's output is written | ALL  stores / returned `null` / that key
+    * null == cache miss
 
 ```flow
 type CacheStores =
@@ -133,10 +133,8 @@ type JsonSerializable = /* Any JSON-serializable value */;
 
 #### `watchFolders`
 
-* TODO:
-Type: `Array<string>`
-
-A list of directories outside of [`projectRoot`](#projectroot) that can contain source files for the project.
+* Type: `Array<string>`
+* == list of directories outside of [`projectRoot`](#projectroot) / can contain project's source files
 
 :::note
 Despite the naming of this option, it isn't related solely to file watching. Even in an offline build (for example, in CI), all files must be visible to Metro through the combination of `watchFolders` and `projectRoot`.
