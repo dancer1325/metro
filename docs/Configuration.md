@@ -89,10 +89,11 @@ title: Configuring Metro
 * by default, 
   * temporary directory | your local disk
 * uses
-  * 
-TODO:
-When Metro needs to transform a module, it first computes a machine-independent cache key for that file, and uses it to try to read from each of the stores in order.
-Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
+  * | transform a module,
+    * Metro FIRST computes a machine-independent cache key / that file
+    * Metrouses tries to read -- vía that key-- / EACH of the stores in order
+
+TODO: Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
 
 ```flow
 type CacheStores =
