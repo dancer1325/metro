@@ -86,8 +86,10 @@ title: Configuring Metro
 * Type: `CacheStores`
 * == list of storage adapters -- for -- Metro's [transformer cache](./Caching.md)
 * == combination of [built-in cache stores](./Caching.md#built-in-cache-stores) + [custom cache stores](./Caching.md#custom-cache-stores) 
-* by defaults, 
+* by default, 
   * temporary directory | your local disk
+* uses
+  * 
 TODO:
 When Metro needs to transform a module, it first computes a machine-independent cache key for that file, and uses it to try to read from each of the stores in order.
 Once Metro has obtained the output of the transformer (whether already cached or not), it writes the transform result to *all* of the stores that returned `null` (a cache miss) for that key.
