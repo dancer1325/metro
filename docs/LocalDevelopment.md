@@ -72,12 +72,13 @@ title: Local Development Setup
 
 ### Debug Logging
 
-* TODO:
-Metro uses the [debug](https://www.npmjs.com/package/debug) package to write logs under named debug scopes (for example: `Metro:WatchmanWatcher`). 
-Set the `DEBUG` environment variable before starting Metro to enable logs matching the supplied pattern.
+* Metro write logs 
+  * -- , via [debug](https://www.npmjs.com/package/debug), -- | named debug scopes
+   * _Example:_ `Metro:WatchmanWatcher`
+  * steps
+    * BEFORE starting Metro, set the `DEBUG` environment variable
 
-The snippet below provides a pattern matching all Metro-defined messages.
 ```sh
 DEBUG='Metro:*' yarn metro serve
 ```
-[1]: https://classic.yarnpkg.com/en/docs/cli/link
+
