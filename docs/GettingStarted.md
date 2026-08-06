@@ -46,9 +46,10 @@ Metro.loadConfig().then(async (config) => {
 });
 ```
 
-* TODO:
-In order to be also compatible with Express apps, `processRequest` will also call its third parameter when the request could not be handled by Metro. 
-This allows you to integrate the server with your existing server, or to extend a new one:
+* `processRequest`
+  * 
+In order to be also compatible with Express apps,  will also call its third parameter when the request could not be handled by Metro. 
+allows you to integrate the server with your existing server, or to extend a new one:
 
 ```js
 const httpServer = http.createServer((req, res) => {
